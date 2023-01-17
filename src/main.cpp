@@ -7,19 +7,25 @@
  */
 
 
+// Have to include "Arduino.h" because we are using PlatformIO build system.
 #include <Arduino.h>
 
 
 
-// Definitions
+/// Definitions
 #define MAG_SWITCH_PIN 2 // attached to interrupt
-#define KEY_SENSOR_PIN 3 // attached to interrupt
+#define KEY_SENSOR_PIN 3 // attached to interrupt -
+#define SOLENOID_PIN 12 // may be changed -
 
-// Global Variables
-uint64_t last_mag_switch_interrupt_time = 0;
-uint64_t last_key_sensor_interrupt_time = 0;
+#define BUZZER_PIN 7 //
+#define PIR_PIN 6
 
-// Constants and enums
+
+/// Global Variables
+uint64_t last_mag_switch_interrupt_time = 0; // in ms
+uint64_t last_key_sensor_interrupt_time = 0; // in ms
+
+/// Constants and enums
 enum SYSTEM_MODES {
     ARMED,
     DISARMED,
@@ -36,7 +42,7 @@ enum DOOR_STATES {
 
 
 
-// ISRs
+/// ISRs
 void magSwitchISR() {
     // debounce the interrupt using millis()
     // if the interrupt is triggered within 100ms of the last interrupt, ignore it
@@ -64,13 +70,13 @@ void keySensorISR() {
     last_key_sensor_interrupt_time = millis();
 }
 
+void PIRSensorISR() {
+    Serial.println("PIR sensor triggered! ");
+}
 
-// Functions
+/// Functions
 
-
-
-
-// Setup and loop
+/// Setup and loop
 void setup() {
     // Set up Serial port (USB) on 9600 baud
     Serial.begin(9600);
@@ -85,8 +91,23 @@ void setup() {
      */
     pinMode(KEY_SENSOR_PIN, INPUT_PULLUP);
     attachInterrupt(digitalPinToInterrupt(KEY_SENSOR_PIN), keySensorISR, FALLING); // Trigger interrupt on falling edge (HIGH to LOW)
+
+    /* Solenoid setup */
+    pinMode(SOLENOID_PIN, OUTPUT);
+
+    /* Buzzer setup */
+    pinMode(BUZZER_PIN, OUTPUT);
+
+    /* PIR setup */
+    pinMode(PIR_PIN, INPUT);
+//    attachInterrupt(digitalPinToInterrupt(PIR_PIN), PIRSensorISR, RISING); // Trigger interrupt on change (LOW to HIGH or HIGH to LOW)
 }
 
 void loop() {
+    int PIR_state = digitalRead(PIR_PIN);
+    Serial.print("PIR state: ");
+    Serial.println(PIR_state);
+
     delay(100);
 }
+
