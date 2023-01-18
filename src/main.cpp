@@ -29,8 +29,8 @@
 uint64_t last_mag_switch_interrupt_time = 0; // in ms
 uint64_t last_key_sensor_interrupt_time = 0; // in ms
 
-uint64_t last_door_open_time = -15000; // in ms
-uint64_t last_door_close_time = -15000; // in ms
+uint64_t last_door_open_time = -100000; // in ms
+uint64_t last_door_close_time = -100000; // in ms
 
 
 uint64_t security_timer = 0; // in ms
@@ -56,6 +56,11 @@ enum LOCK_STATES {
 enum PIR_STATES {
     NO_PRESENCE = 0,
     PRESENCE = 1
+};
+
+enum AUTHORISATION_STATES {
+    UNAUTHORISED = 0,
+    AUTHORISED = 1
 };
 
 // States
@@ -143,7 +148,7 @@ void loop() {
         digitalWrite(SOLENOID_PIN, HIGH); // Unlock door
         while (millis() - security_timer < 30000) {
             if (door_state == DOOR_STATES::CLOSED) {
-                if (millis() - security_timer > 10000) {
+                if ((millis() - security_timer > 10000) && (lock_state == LOCK_STATES::UNLOCKED) ) {
                     // Door will re-lock after 10 seconds if not opened
                     // (i.e. unlocked but not entered)
                     Serial.println("LOCKING DOOR");
@@ -151,35 +156,41 @@ void loop() {
                     digitalWrite(SOLENOID_PIN, LOW);
                     break;
                 }
-                if (millis() - last_door_open_time < 10000) {
+                if ((millis() - last_door_open_time < 10000) && (lock_state == LOCK_STATES::UNLOCKED)) {
                     // Door will re-lock after it has been opened in the past 10 seconds
                     // (i.e. opened then closed)
-                    Serial.println("LOCKING DOOR");
+                    Serial.println("LOCKING DOOR2");
                     lock_state = LOCK_STATES::LOCKED;
                     digitalWrite(SOLENOID_PIN, LOW);
-                    break;
                 }
             }
 
             // starts warning buzzer if door is open
-            if (door_state == DOOR_STATES::OPEN) {
-                switch (system_mode) {
-                    case (SYSTEM_MODES::ARMED):
-                        intermittentBeep(1000,50,500);
-                        break;
-                    case (SYSTEM_MODES::AT_HOME):
-                        intermittentBeep(1000,50,500);
-                        break;
-                    case (SYSTEM_MODES::DISARMED):
-                        break;
+            switch (system_mode) {
+                case (SYSTEM_MODES::ARMED):
+                    if (millis() - last_door_open_time < 30000) {
+                        beep(1000, 50, 500);  // starts warning buzzer if door is open
+                    }
+                    break;
+                case (SYSTEM_MODES::AT_HOME):
+                    if (millis() - last_door_open_time < 30000) {
+                        beep(1000, 50, 500);  // starts warning buzzer if door is open
+                    }
+                    break;
+                case (SYSTEM_MODES::DISARMED):
+                    break;
 
-                    default:
-                        break;
-                }
+                default:
+                    break;
             }
-            delay(10);
         }
+        while ((authorization == AUTHORISATION_STATES::UNAUTHORISED) && (millis() - last_door_open_time < 15*60*1000)) {
+            beep(420,500,0);
+            beep(516,500,0);
+        }
+        delay(10);
     }
+
 
 }
 
