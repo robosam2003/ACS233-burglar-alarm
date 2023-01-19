@@ -26,6 +26,7 @@
 #define PIR_PIN 6
 
 #define ALARM_FREQ 1000
+#define ALARM_TIMEOUT 10000 // 15*60*1000 // Should be 15 minutes in the end // TODO
 
 
 
@@ -75,6 +76,11 @@ enum AUTHORISATION_STATES {
     AUTHORISED = 1
 };
 
+enum UNAUTHORISED_ENTRY_METHODS {
+    DOOR_OPENED = 0,
+    PIR_TRIGGERED = 1
+};
+
 // States
 SYSTEM_MODES system_mode = SYSTEM_MODES::AT_HOME; // initialised to DISARMED // TODO
 
@@ -85,26 +91,24 @@ volatile PIR_STATES pir_state = PIR_STATES::NO_PRESENCE;
 
 /// ISRs
 void magSwitchISR() {
-    // debounce the interrupt using millis()
-    // if the interrupt is triggered within 100ms of the last interrupt, ignore it
-    // otherwise, set the alarm off
-    if (timeSince_ms(last_mag_switch_interrupt_time) > 100) {
-        int state = digitalRead(MAG_SWITCH_PIN);
+    if (timeSince_ms(last_mag_switch_interrupt_time) > 100) {     // debounce the interrupt using millis()
+        int state = digitalRead(MAG_SWITCH_PIN); // reading the door state after a change
         door_state = (DOOR_STATES) state;
 
         if (state == DOOR_STATES::CLOSED) {
+            Serial.println("Door was closed");
             last_door_close_time = millis();
             if (lock_state == LOCK_STATES::UNLOCKED) {
-                Serial.println("LOCKING DOOR");
+                // If the door gets closed and the lock is unlocked, lock the door
+                Serial.println("LOCKING DOOR1");
                 lock_state = LOCK_STATES::LOCKED;
                 digitalWrite(SOLENOID_PIN, LOW);
             }
-        } else { // door_state == DOOR_STATES::OPEN
+        }
+        else { // door_state == DOOR_STATES::OPEN
+            Serial.println("Door was opened");
             last_door_open_time = millis();
         }
-
-        Serial.print("Door state changed to: ");
-        Serial.println(state);
     }
     // update the last interrupt time
     last_mag_switch_interrupt_time = millis();
@@ -112,11 +116,11 @@ void magSwitchISR() {
 
 void keySensorISR() {
     if (timeSince_ms(last_key_sensor_interrupt_time) > 100) { // debounce the interrupt using millis()
-        security_timer = millis();
-        lock_state = LOCK_STATES::UNLOCKED;
-        Serial.println("Lock state changed to: UNLOCKED");
+        security_timer = millis(); // start the security timer
         Serial.println("UNLOCKING DOOR");
         digitalWrite(SOLENOID_PIN, HIGH); // Unlock door
+        lock_state = LOCK_STATES::UNLOCKED;
+        Serial.println("Lock state changed to: UNLOCKED");
     }
     last_key_sensor_interrupt_time = millis();
 }
@@ -165,23 +169,23 @@ void loop() {
     if (lock_state == LOCK_STATES::UNLOCKED) {
 //        Serial.println("UNLOCKING DOOR"); - Now happening in the ISR
 //        digitalWrite(SOLENOID_PIN, HIGH); // Unlock door
-        while (millis() - security_timer < 30000) {
+        while (timeSince_ms(security_timer) < 30000) {
             if (door_state == DOOR_STATES::CLOSED) {
-                if ((millis() - security_timer > 10000) && (lock_state == LOCK_STATES::UNLOCKED) ) { // only re-lock if the Lock is unlocked
-                    // Door will re-lock after 10 seconds if not opened      // Now happening in ISR
+                if ((timeSince_ms(security_timer) > 10000) && (lock_state == LOCK_STATES::UNLOCKED) ) { // only re-lock if the lock is unlocked
+                    // Door will re-lock after 10 seconds if not opened
                     // (i.e. unlocked but not entered)
                     Serial.println("LOCKING DOOR2");
                     lock_state = LOCK_STATES::LOCKED;
                     digitalWrite(SOLENOID_PIN, LOW);
                     break;
                 }
-                if ((millis() - last_door_open_time < 10000) && (lock_state == LOCK_STATES::UNLOCKED)) {
-                    // Door will re-lock after it has been opened in the past 10 seconds
-                    // (i.e. opened then closed)
-                    Serial.println("LOCKING DOOR3");
-                    lock_state = LOCK_STATES::LOCKED;
-                    digitalWrite(SOLENOID_PIN, LOW);
-                }
+//                if ((timeSince_ms(last_door_open_time) < 10000) && (lock_state == LOCK_STATES::UNLOCKED)) {
+//                    // Door will re-lock after it has been opened in the past 10 seconds
+//                    // (i.e. opened then closed)             // Now happening in ISR
+//                    Serial.println("LOCKING DOOR3");
+//                    lock_state = LOCK_STATES::LOCKED;
+//                    digitalWrite(SOLENOID_PIN, LOW);
+//                }
             }
 
             // starts warning buzzer if door is open
