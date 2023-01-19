@@ -133,9 +133,43 @@ void PIRSensorISR() {
 
 /// Functions
 
+void beep(int freq, int onDel, int offDel){
+    tone(BUZZER_PIN, freq);
+    delay(onDel);
+    noTone(BUZZER_PIN);
+    delay(offDel);
+}
 
+void alarmOn(){
+    tone(BUZZER_PIN, ALARM_FREQ);
+    last_alarm_on_time = millis();
+}
 
-/// Setup and loop
+void alarmOff() {
+    noTone(BUZZER_PIN);
+}
+
+void unauthorizedEntry(UNAUTHORISED_ENTRY_METHODS method) {
+    switch (method) {
+        case DOOR_OPENED:
+            switch (system_mode) {
+                case (SYSTEM_MODES::ARMED):   // when cases don't have a break, they fall through to the next case (i.e. this means OR)
+                case (SYSTEM_MODES::AT_HOME):
+                    alarmOn(); // alarm switching on
+                    break;
+                case (SYSTEM_MODES::DISARMED):
+                default:
+                    break;
+            }
+
+            
+            break;
+        case PIR_TRIGGERED:
+            break;
+    }
+}
+
+// Setup and loop
 void setup() {
     // Set up Serial port (USB) on 9600 baud
     Serial.begin(9600);
@@ -164,7 +198,8 @@ void setup() {
 
 void loop() {
 
-    int entered = 0; // checks for user entry
+    AUTHORISATION_STATES authorization = AUTHORISATION_STATES::UNAUTHORISED; //id password authorization variable
+
     // authorized entry
     if (lock_state == LOCK_STATES::UNLOCKED) {
 //        Serial.println("UNLOCKING DOOR"); - Now happening in the ISR
@@ -208,5 +243,22 @@ void loop() {
     }
 
 
+    // unauthorised entry
+    if (door_state == DOOR_STATES::OPEN) { // triggered by door opening without unlocking
+        switch (system_mode) {
+            case (SYSTEM_MODES::ARMED):   // when cases don't have a break, they fall through to the next case (i.e. this means OR)
+            case (SYSTEM_MODES::AT_HOME):
+                alarmOn(); // alarm switching on
+                break;
+            case (SYSTEM_MODES::DISARMED):
+            default:
+                break;
+        }
+    }
+
+    if (timeSince_ms(last_alarm_on_time) > ALARM_TIMEOUT) {
+        Serial.println("Alarm timeout");
+        alarmOff();
+    }
 }
 
