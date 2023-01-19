@@ -204,6 +204,60 @@ void unauthorizedEntry(UNAUTHORISED_ENTRY_METHODS method) {
     }
 }
 
+void authorizedEntry() {
+    // authorized entry
+//        Serial.println("UNLOCKING DOOR"); - Now happening in the ISR
+//        digitalWrite(SOLENOID_PIN, HIGH); // Unlock door
+    while (timeSince_ms(security_timer) < INTERMITTENT_TIMEOUT) {
+        if (door_state == DOOR_STATES::CLOSED) {
+            if ((timeSince_ms(security_timer) > 10000) &&
+                (lock_state == LOCK_STATES::UNLOCKED)) { // only re-lock if the lock is unlocked
+                // Door will re-lock after 10 seconds if not opened
+                // (i.e. unlocked but not entered)
+                Serial.println("LOCKING DOOR2");
+                lock_state = LOCK_STATES::LOCKED;
+                digitalWrite(SOLENOID_PIN, LOW);
+                break;
+            }
+//                if ((timeSince_ms(last_door_open_time) < 10000) && (lock_state == LOCK_STATES::UNLOCKED)) {
+//                    // Door will re-lock after it has been opened in the past 10 seconds
+//                    // (i.e. opened then closed)             // Now happening in ISR
+//                    Serial.println("LOCKING DOOR3");
+//                    lock_state = LOCK_STATES::LOCKED;
+//                    digitalWrite(SOLENOID_PIN, LOW);
+//                }
+        }
+
+        // starts warning buzzer if door is open
+        switch (system_mode) {
+            case (SYSTEM_MODES::ARMED):
+            case (SYSTEM_MODES::AT_HOME):
+                if (timeSince_ms(last_door_open_time) < INTERMITTENT_TIMEOUT) {
+                    beep(1000, 50, 500);  // starts warning buzzer if door is open
+                }
+                break;
+            case (SYSTEM_MODES::DISARMED):
+            default:
+                break;
+        }
+
+    }
+    //check for valid password // TODO
+
+    if ((authorization == AUTHORISATION_STATES::UNAUTHORISED) && (timeSince_ms(last_door_open_time) < ALARM_TIMEOUT)) {
+        alarmOn(); // alarm switching on
+        int a = timeSince_ms(last_alarm_on_time);
+        Serial.println(a);
+    }
+    while ((authorization == AUTHORISATION_STATES::UNAUTHORISED) && (timeSince_ms(last_door_open_time) < ALARM_TIMEOUT)) {
+        // Check for Valid password // TODO
+        int a = timeSince_ms(last_alarm_on_time);
+        Serial.println(a);
+    }
+    alarmOff(); // alarm switching off
+
+}
+
 // Setup and loop
 void setup() {
     // Set up Serial port (USB) on 9600 baud
