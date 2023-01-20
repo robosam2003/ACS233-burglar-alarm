@@ -14,9 +14,6 @@
 // Have to include "Arduino.h" because we are using PlatformIO build system.
 #include <Arduino.h>
 
-
-
-
 /// Definitions
 #define MAG_SWITCH_PIN 2 // attached to interrupt
 #define KEY_SENSOR_PIN 3 // attached to interrupt -
@@ -82,6 +79,7 @@ enum VERIFICATION_WINDOW_STATES {
     WINDOW_OPEN = 1
 };
 
+
 // States
 SYSTEM_MODES system_mode = SYSTEM_MODES::ARMED; // initialised to DISARMED // TODO
 
@@ -145,7 +143,7 @@ void setup() {
 
     /* PIR setup */
     pinMode(PIR_PIN, INPUT);
-    attachInterrupt(digitalPinToInterrupt(PIR_PIN), PIRSensorISR, RISING); // Trigger interrupt on change (LOW to HIGH or HIGH to LOW)
+    attachInterrupt(digitalPinToInterrupt(PIR_PIN), PIRSensorISR, CHANGE); // Trigger interrupt on change (LOW to HIGH or HIGH to LOW)
 
     /* Alarm LED setup */
     pinMode(ALARM_LED,OUTPUT);
@@ -210,11 +208,11 @@ void keySensorISR() {
 
 void PIRSensorISR() {
     // The PIR does not need debouncing, it goes High for 8 seconds when motion is detected
-    pir_state = PIR_STATES::PRESENCE;
-
     if (pir_state == PIR_STATES::PRESENCE) {
+        pir_state = PIR_STATES::PRESENCE;
         Serial.println("PIR state changed to: PRESENCE");
         digitalWrite(PIR_LED,HIGH);
+        verificationWindowOpen();
     }
     else {
         digitalWrite(PIR_LED,LOW);
@@ -226,15 +224,13 @@ void PIRSensorISR() {
 void verifyUser() {
     Serial.println("VERIFICATION REQUEST");
     String message;
-    while (!Serial.available()) {
-        // Read the serial port until a newline
-        message = Serial.readStringUntil('\n');
-        Serial.println("Message received: " + message);
-        break;
-    }
+    while (!Serial.available()); // wait for user input
+    // Read the serial port until a newline
+    message = Serial.readStringUntil('\n');
+    Serial.println("Message received: " + message);
+
     if (message == "VERIFIED") {
         authorization_state = AUTHORISATION_STATES::AUTHORISED;
-        alarmOff(); // regardless of the mode, if the user is authorised, turn off the alarm
         Serial.println("I RECEIVED YOUR VERIFIED MESSAGE");
         verificationWindowClosed();
         alarmOff();
@@ -338,10 +334,9 @@ void authorizedEntry() {
     // authorized entry
 //        Serial.println("UNLOCKING DOOR"); - Now happening in the ISR
 //        digitalWrite(SOLENOID_PIN, HIGH); // Unlock door
-    while (timeSince_ms(security_timer) < INTERMITTENT_TIMEOUT) {
+    while ((timeSince_ms(security_timer) < INTERMITTENT_TIMEOUT) && (authorization_state == AUTHORISATION_STATES::UNAUTHORISED)) {
         if (door_state == DOOR_STATES::CLOSED) {
-            if ((timeSince_ms(security_timer) > 10000) &&
-                (lock_state == LOCK_STATES::UNLOCKED)) { // only re-lock if the lock is unlocked
+            if ((timeSince_ms(security_timer) > 10000) && (lock_state == LOCK_STATES::UNLOCKED)) { // only re-lock if the lock is unlocked
                 // Door will re-lock after 10 seconds if not opened
                 // (i.e. unlocked but not entered)
                 Serial.println("LOCKING DOOR2");
@@ -357,6 +352,11 @@ void authorizedEntry() {
             case (SYSTEM_MODES::AT_HOME):
                 if (timeSince_ms(last_door_open_time) < INTERMITTENT_TIMEOUT) {
                     beep(1000, 50, 500);  // starts warning buzzer if door is open
+                    //check for valid password // TODO
+                    verifyUser();
+                    if (authorization_state == AUTHORISATION_STATES::AUTHORISED) {
+                        break;
+                    }
                 }
                 break;
             case (SYSTEM_MODES::DISARMED):
@@ -365,8 +365,6 @@ void authorizedEntry() {
         }
 
     }
-    //check for valid password // TODO
-    verifyUser();
 
     if ((authorization_state == AUTHORISATION_STATES::UNAUTHORISED) && (timeSince_ms(last_door_open_time) < ALARM_TIMEOUT)) {
         alarmOn(); // alarm switching on
@@ -375,7 +373,8 @@ void authorizedEntry() {
         LEDblink(100,100);
         // Check for Valid password // TODO
         verifyUser();
-
     }
     alarmOff(); // alarm switching off
 }
+
+

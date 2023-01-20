@@ -1,12 +1,12 @@
+import time
+
 import face_recognition
 import cv2
 import numpy as np
 import serial
 import asyncio
 import keyboard
-import serial
-import asyncio
-import keyboard
+
 
 # This is a demo of running face recognition on live video from your webcam. It's a little more complicated than the
 # other example, but it includes some basic performance tweaks to make things run a lot faster:
@@ -60,7 +60,7 @@ known_face_names = [
     "Eurico Benedict",
     "Alex Hicks",
     "Simon Desir",
-    "Tara B"
+    "Tara Baldacchino"
 ]
 
 # Initialize some variables
@@ -71,43 +71,43 @@ process_this_frame = True
 
 
 
-def verify_face():    # Grab a single frame of video
+
+def verify_face():
+    # Grab a single frame of video
     ret, frame = video_capture.read()
-    result = False
-    global face_locations, face_encodings, face_names, process_this_frame
+    isThereAVerifiedFaceThere = False
     # Only process every other frame of video to save time
-    if process_this_frame:
-        # Resize frame of video to 1/4 size for faster face recognition processing
-        small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
+    # Resize frame of video to 1/4 size for faster face recognition processing
+    small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
 
-        # Convert the image from BGR color (which OpenCV uses) to RGB color (which face_recognition uses)
-        rgb_small_frame = small_frame[:, :, ::-1]
+    # Convert the image from BGR color (which OpenCV uses) to RGB color (which face_recognition uses)
+    rgb_small_frame = small_frame[:, :, ::-1]
 
-        # Find all the faces and face encodings in the current frame of video
-        face_locations = face_recognition.face_locations(rgb_small_frame)
-        face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
+    # Find all the faces and face encodings in the current frame of video
+    face_locations = face_recognition.face_locations(rgb_small_frame)
+    face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
 
-        face_names = []
-        for face_encoding in face_encodings:
-            # See if the face is a match for the known face(s)
-            matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
-            name = "Unknown"
+    face_names = []
+    for face_encoding in face_encodings:
+        # See if the face is a match for the known face(s)
+        matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
+        name = "Unknown"
 
-            # If a match was found in known_face_encodings, just use the first one.
-            if True in matches:
-                result = True
-                first_match_index = matches.index(True)
-                name = known_face_names[first_match_index]
+        # # If a match was found in known_face_encodings, just use the first one.
+        if True in matches:
+            isThereAVerifiedFaceThere = True
+            first_match_index = matches.index(True)
+            name = known_face_names[first_match_index]
 
-            # Or instead, use the known face with the smallest distance to the new face
-            # face_distances = face_recognition.face_distance(known_face_encodings, face_encoding)
-            # best_match_index = np.argmin(face_distances)
-            # if matches[best_match_index]:
-            #     name = known_face_names[best_match_index]
+        # Or instead, use the known face with the smallest distance to the new face
+        # face_distances = face_recognition.face_distance(known_face_encodings, face_encoding)
+        # best_match_index = np.argmin(face_distances)
+        # if matches[best_match_index]:
+        #     name = known_face_names[best_match_index]
 
-            face_names.append(name)
+        face_names.append(name)
 
-    process_this_frame = not process_this_frame
+    # process_this_frame = not process_this_frame
 
 
     # Display the results
@@ -130,9 +130,115 @@ def verify_face():    # Grab a single frame of video
     cv2.imshow('Video', frame)
 
     # Hit 'q' on the keyboard to quit!
-    # if cv2.waitKey(1) & 0xFF == ord('q'):
-    #     break
-    return result
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        pass
+    return isThereAVerifiedFaceThere
+
+
+def set_up_key_press():
+    keyboard.on_press_key('1', lambda _: keyCode.append(1))  # adds pin to a buffer
+    keyboard.on_press_key('2', lambda _: keyCode.append(2))
+    keyboard.on_press_key('3', lambda _: keyCode.append(3))
+    keyboard.on_press_key('4', lambda _: keyCode.append(4))
+    keyboard.on_press_key('5', lambda _: keyCode.append(5))
+    keyboard.on_press_key('6', lambda _: keyCode.append(6))
+    keyboard.on_press_key('7', lambda _: keyCode.append(7))
+    keyboard.on_press_key('8', lambda _: keyCode.append(8))
+    keyboard.on_press_key('9', lambda _: keyCode.append(9))
+    keyboard.on_press_key('0', lambda _: keyCode.append(0))
+
+def AdminMenu():
+    global userPin, keyCode
+    keyboard.unhook_all() #Unhooks keyboard interrupts
+    answer = input("Welcome back commander\n Would you like to change the PIN? Y/N?") # TODO: Make this proper english
+    if answer == 'Y':
+        inputPIN0 = int(input("Enter new user PIN"))
+        inputPIN1 = int(input("Enter PIN again to confirm"))
+        if inputPIN0 == inputPIN1:
+            userPin = [int(x) for x in str(inputPIN0)]
+            print("PIN successfully changed. Have a nice day!")
+        # else:
+        #     # ...
+    set_up_key_press()
+    keyCode = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+
+ser = serial.Serial("COM6", 9600, timeout=0.1)
+verification_window_open = False
+verified = False
+set_up_key_press()
+
+keyCode = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+userPin = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+adminPin = [2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
+
+def verify_pin(face_verified):
+    lastFour = keyCode[-4:]
+    userFullPin = keyCode[-10:]
+
+    print(lastFour[-1])
+    print(userFullPin)
+
+    if (face_verified == True) and (userPin[0:4] == lastFour):
+        #print("Now you're really in baby;)")
+        print("You used facial rec")
+        return True
+
+
+    if (face_verified == False) and (userFullPin == userPin):
+        print("You did not use facial rec")
+        return True
+
+    if (userFullPin == adminPin):
+        AdminMenu()
+        print("User Pin = ", userPin)
+
+    return False
+
+
+while True:
+    try:
+        verify_face()
+        # read line from serial
+        line = ser.readline()
+        line = line.decode()  # decode the bytes into a string
+        print(line, end="")
+        if line.startswith("VERIFICATION WINDOW OPEN"):
+            print("OPENING VERIFICATION WINDOW")
+            verification_window_open = True
+
+        if line.startswith("VERIFICATION WINDOW CLOSED"):
+            print("CLOSING VERIFICATION WINDOW")
+            verification_window_open = False
+            verified = False
+            keyCode = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+        if line.startswith("VERIFICATION REQUEST"):
+            print("THERE WAS A VERIFICATION REQUEST")
+            # Do the verification
+            if (verification_window_open == True) and (verified == False):
+                face_verified = verify_face()
+                verified = verify_pin(face_verified)
+            if verified:
+                verified_string = "VERIFIED\n"  # need the \n for Serial reading
+                verified_bytes = verified_string.encode()
+                ser.write(verified_bytes)
+                print("Wrote verified bytes")
+            else:
+                not_verified_string = "NOT VERIFIED\n"  # need the \n for Serial reading
+                not_verified_bytes = not_verified_string.encode()
+                ser.write(not_verified_bytes)
+                print("Wrote not verified bytes")
+
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+    except KeyboardInterrupt:
+        break
+
+
+
+ser.close()
 
 # Release handle to the webcam
 video_capture.release()
