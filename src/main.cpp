@@ -1,21 +1,22 @@
 /*
  * A burglar alarm system (GROUP 4) 23 Jan 2023
+ * Authors: Samuel Scott, Eurico Benedict, Simon Desir, Alex Hicks, Yu-ta Chou
  *
- * This Program is the arduino end to a two piece inter-working software that runs
- * our burglar alarm system. It functions as follows, it monitors sensor inputs and reacts
+ * This program is the arduino end to a two piece inter-working software that runs
+ * the burglar alarm system. It functions as follows, it monitors sensor inputs and reacts
  * accordingly.
  *
  * Input devices are listed as follows;
  * PIR Sensor - used to detect motion
  * Magnetic Reed Sensor - used to detect door state (open/closed)
  * Button - used to detect unlocking of the door
- * Python stream - Used for user authorisation confirmation and mode change input
+ * Python serial stream - Used for user authorisation confirmation and mode change input
  *
  * Output devices are listed as follows;
  * Piezo buzzer - used as a warning or alarm sound output
  * Solenoid - used to lock and unlock door
  * LEDs - used as a status indicator
- * Python stream - Used for authorisation requests
+ * Python serial stream - Used for authorisation requests
  *
  * There are three modes programmed into the system and depending on the modes it is running on
  * the system behaves a different way.
@@ -27,7 +28,6 @@
  * DISARMED - in disarmed mode door will still lock but no authorisation will be needed, and no alarm will sound under
  * any conditions.
  *
- * Authors: Samuel Scott, Eurico Benedict, Simon Desir, Alex Hicks, Yu-ta Chou
  */
 
 
@@ -163,6 +163,25 @@ void setup() {
     pinMode(AT_HOME_MODE_LED,OUTPUT);
     pinMode(DISARMED_MODE_LED,OUTPUT);
     pinMode(PIR_LED,OUTPUT);
+
+    switch (system_mode) {
+        case ARMED:
+            digitalWrite(DISARMED_MODE_LED, LOW);
+            digitalWrite(AT_HOME_MODE_LED, LOW);
+            digitalWrite(ARMED_MODE_LED, HIGH);
+            break;
+        case AT_HOME:
+            digitalWrite(DISARMED_MODE_LED, LOW);
+            digitalWrite(ARMED_MODE_LED, LOW);
+            digitalWrite(AT_HOME_MODE_LED, HIGH);
+            break;
+        case DISARMED:
+            digitalWrite(AT_HOME_MODE_LED, LOW);
+            digitalWrite(ARMED_MODE_LED, LOW);
+            digitalWrite(DISARMED_MODE_LED, HIGH);
+            break;
+    }
+
 }
 
 void loop() {
@@ -176,9 +195,11 @@ void loop() {
     if (door_state == DOOR_STATES::OPEN) { // triggered by door opening without unlocking
         unauthorizedEntry(UNAUTHORISED_ENTRY_METHODS::DOOR_OPENED);
     }
-    if (pir_state == PIR_STATES::PRESENCE) { // triggered by PIR sensor
-        unauthorizedEntry(UNAUTHORISED_ENTRY_METHODS::PIR_TRIGGERED);
-    }
+//    if (pir_state == PIR_STATES::PRESENCE) { // triggered by PIR sensor
+//        unauthorizedEntry(UNAUTHORISED_ENTRY_METHODS::PIR_TRIGGERED);
+//    }
+    // TODO: Changing mode without unlocking door.
+    // Check for mode change key from python
 }
 
 /// ISRs
@@ -198,7 +219,15 @@ void magSwitchISR() {
             }
         }
         else { // door_state == DOOR_STATES::OPEN
-            verificationWindowOpen();
+            switch (system_mode) {
+                case (SYSTEM_MODES::ARMED):
+                case (SYSTEM_MODES::AT_HOME):
+                    verificationWindowOpen();
+                    break;
+                case (SYSTEM_MODES::DISARMED):
+                default:
+                    break;
+            }
             last_door_open_time = millis();
         }
     }
@@ -223,7 +252,15 @@ void PIRSensorISR() {
         pir_state = PIR_STATES::PRESENCE;
         Serial.println("PIR state changed to: PRESENCE");
         digitalWrite(PIR_LED,HIGH);
-        verificationWindowOpen();
+        switch (system_mode) {
+            case (SYSTEM_MODES::ARMED):
+            case (SYSTEM_MODES::AT_HOME):
+                verificationWindowOpen();
+                break;
+            case (SYSTEM_MODES::DISARMED):
+            default:
+                break;
+        }
     }
     else {
         digitalWrite(PIR_LED,LOW);
@@ -232,30 +269,70 @@ void PIRSensorISR() {
 
 /// Functions
 
-void verifyUser() {
-    Serial.println("VERIFICATION REQUEST");
+void changingMode() {
+    // Uses/ incorporates verifyUser() function
     String message;
     while (!Serial.available()); // wait for user input
     // Read the serial port until a newline
     message = Serial.readStringUntil('\n');
     Serial.println("Message received: " + message);
 
-    if (message == "VERIFIED") {
-        authorization_state = AUTHORISATION_STATES::AUTHORISED;
-        Serial.println("I RECEIVED YOUR VERIFIED MESSAGE");
-        verificationWindowClosed();
-        alarmOff();
+    if (message == "MODE: ARMED") {
+        system_mode = SYSTEM_MODES::ARMED;
+        digitalWrite(DISARMED_MODE_LED,LOW);
+        digitalWrite(AT_HOME_MODE_LED,LOW);
+        digitalWrite(ARMED_MODE_LED,HIGH);
+
     }
-    else {
-        authorization_state = AUTHORISATION_STATES::UNAUTHORISED;
-        return;
+    else if (message == "MODE: AT-HOME") {
+        system_mode = SYSTEM_MODES::AT_HOME;
+        digitalWrite(DISARMED_MODE_LED,LOW);
+        digitalWrite(ARMED_MODE_LED,LOW);
+        digitalWrite(AT_HOME_MODE_LED,HIGH);
+
+    }
+    else if (message == "MODE: DISARMED") {
+        system_mode = SYSTEM_MODES::DISARMED;
+        digitalWrite(AT_HOME_MODE_LED,LOW);
+        digitalWrite(ARMED_MODE_LED,LOW);
+        digitalWrite(DISARMED_MODE_LED,HIGH);
+    }
+    security_timer = -10000; // reset security timer in case mode changed inside intermittent timeout window
+    // TODO: Defensive programming for if (for some reason) the message is not one of the above
+}
+
+
+void verifyUser() {
+    if (verification_window_state == VERIFICATION_WINDOW_STATES::WINDOW_OPEN) {
+        Serial.println("VERIFICATION REQUEST");
+        String message;
+        while (!Serial.available()); // wait for user input
+        // Read the serial port until a newline
+        message = Serial.readStringUntil('\n');
+        Serial.println("Message received: " + message);
+
+        if (message == "VERIFIED") {
+            authorization_state = AUTHORISATION_STATES::AUTHORISED;
+            Serial.println("I RECEIVED YOUR VERIFIED MESSAGE");
+            alarmOff();
+
+            changingMode();
+            Serial.println("MODE CHANGED TO: " + (String) system_mode);
+            verificationWindowClosed();
+        }
+        else if (message == "VERIFICATION WINDOW CLOSED") { // This is for when the user enters the pin too many times.
+            verification_window_state = VERIFICATION_WINDOW_STATES::WINDOW_CLOSED;
+
+        } else { // message is "NOT VERIFIED"
+            authorization_state = AUTHORISATION_STATES::UNAUTHORISED;
+            return;
+        }
     }
 }
 
 void verificationWindowOpen() {
     Serial.println("VERIFICATION WINDOW OPEN");
     verification_window_state = VERIFICATION_WINDOW_STATES::WINDOW_OPEN;
-
 }
 
 void verificationWindowClosed() {
@@ -280,11 +357,11 @@ void beep(int freq,int onDel,int offDel) {
 void alarmOn() {
     tone(BUZZER_PIN, ALARM_FREQ);
     last_alarm_on_time = millis();
-
 }
 
 void alarmOff() {
     noTone(BUZZER_PIN);
+    digitalWrite(BUZZER_PIN, LOW);
 }
 
 void unauthorizedEntry(UNAUTHORISED_ENTRY_METHODS method) {
@@ -296,15 +373,18 @@ void unauthorizedEntry(UNAUTHORISED_ENTRY_METHODS method) {
                     alarmOn(); // alarm switching on
                     break;
                 case (SYSTEM_MODES::DISARMED):
+                    return;
                 default:
                     break;
             }
 
             // Waiting for verified pin or 15 minutes elapsed
-            while ((authorization_state == AUTHORISATION_STATES::UNAUTHORISED) && (timeSince_ms(last_alarm_on_time) < ALARM_TIMEOUT)) {
+            while ((authorization_state == AUTHORISATION_STATES::UNAUTHORISED) &&
+                    (timeSince_ms(last_alarm_on_time) < ALARM_TIMEOUT)) {
                 LEDblink(100,100);
                 verifyUser();
                 if (authorization_state == AUTHORISATION_STATES::AUTHORISED) {
+                    authorization_state = AUTHORISATION_STATES::UNAUTHORISED;
                     break;
                 }
             }
@@ -321,6 +401,7 @@ void unauthorizedEntry(UNAUTHORISED_ENTRY_METHODS method) {
                         break;
                     case (SYSTEM_MODES::AT_HOME):
                     case (SYSTEM_MODES::DISARMED):
+                        return;
                     default:
                         break;
                 }
@@ -332,6 +413,7 @@ void unauthorizedEntry(UNAUTHORISED_ENTRY_METHODS method) {
                     LEDblink(100,100);
                     verifyUser();
                     if (authorization_state == AUTHORISATION_STATES::AUTHORISED) {
+                        authorization_state = AUTHORISATION_STATES::UNAUTHORISED;
                         break;
                     }
                 }
@@ -363,10 +445,10 @@ void authorizedEntry() {
             case (SYSTEM_MODES::AT_HOME):
                 if (timeSince_ms(last_door_open_time) < INTERMITTENT_TIMEOUT) {
                     beep(1000, 50, 500);  // starts warning buzzer if door is open
-                    //check for valid password // TODO
                     verifyUser();
                     if (authorization_state == AUTHORISATION_STATES::AUTHORISED) {
-                        break;
+                        authorization_state = AUTHORISATION_STATES::UNAUTHORISED;
+                        return;
                     }
                 }
                 break;
@@ -377,15 +459,13 @@ void authorizedEntry() {
 
     }
 
-    if ((authorization_state == AUTHORISATION_STATES::UNAUTHORISED) && (timeSince_ms(last_door_open_time) < ALARM_TIMEOUT)) {
-        alarmOn(); // alarm switching on
-    }
     while ((authorization_state == AUTHORISATION_STATES::UNAUTHORISED) && (timeSince_ms(last_door_open_time) < ALARM_TIMEOUT)) {
+        alarmOn(); // alarm switching on
         LEDblink(100,100);
-        // Check for Valid password // TODO
         verifyUser();
     }
     alarmOff(); // alarm switching off
+    authorization_state = AUTHORISATION_STATES::UNAUTHORISED;
 }
 
 
