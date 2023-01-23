@@ -1,11 +1,29 @@
 /*
- * A burglar alarm system
+ * A burglar alarm system GROUP 4
  *
- * This program will run the burglar alarm system.
- * The program will monitor door states via reed switch
- * The program will monitor button presses
- * the program will monitor human presence via pir
+ * This Program is the arduino end to a two piece inter-working software that runs
+ * our burglar alarm system. It functions as follows, it monitors sensor inputs and reacts
+ * accordingly.
  *
+ * Input devices are listed as follows;
+ * PIR Sensor - used to detect motion
+ * Magnetic Reed Sensor - used to detect door state (open/closed)
+ * Button - used to detect unlocking of the door
+ * Pyton stream - Used for user authorisation confirmation and mode change input
+ *
+ * Output devices are listed as follows;
+ * Piezo buzzer - used as a warning or alarm sound output
+ * Solenoid - used to lock and unlock door
+ * LEDs - used as a status indicator
+ * Pyton stream - Used for authorisation requests
+ *
+ * There are three modes programmed into the system and depending on the modes it is running on
+ * the system behaves a different way.
+ * ARMED - in armed mode all sensor input is taken into account, if PIR detects movement when the door is not unlocked
+ * it will sound an alarm, if the reed sensor is activated without unlocking it will sound an alarm, if the user
+ * fails to be authorised during the entry procedure it will sound an alarm.
+ * AT_HOME
+ * DISARMED
  *
  * Authors: Samuel Scott, Eurico Benedict, Simon Desir, Alex Hicks, Yu-ta Chou
  */

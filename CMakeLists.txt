@@ -10,7 +10,7 @@ set(CMAKE_SYSTEM_NAME Generic)
 set(CMAKE_C_COMPILER_WORKS 1)
 set(CMAKE_CXX_COMPILER_WORKS 1)
 
-project("ACS233_group4_burglar" C CXX)
+project("ACS233-burglar-alarm" C CXX)
 
 include(CMakeListsPrivate.txt)
 
