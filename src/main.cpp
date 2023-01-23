@@ -40,7 +40,7 @@
 #define SOLENOID_PIN 12 // may be changed -
 
 #define BUZZER_PIN 7 //
-#define PIR_PIN 18
+#define PIR_PIN 19
 
 #define ALARM_FREQ 500
 #define INTERMITTENT_TIMEOUT 15000 // 30 seconds
@@ -118,12 +118,16 @@ int64_t last_mode_change_time = 0;
 // TODO: unauthorized entry when password has not been inputted ( warning mode)
 
 //ISR Prototypes
+void toArmedMode();
+void toDisarmedMode();
+void toAtHomeMode();
 void keySensorISR();
 void magSwitchISR();
 void PIRSensorISR();
 void verifyUser();
 void verificationWindowOpen();
 void verificationWindowClosed();
+void changingMode();
 void LEDblink(int onDel,int offDel);
 void beep(int freq,int onDel,int offDel);
 void alarmOn();
@@ -137,13 +141,11 @@ void setup() {
     Serial.begin(9600);
 
     /* Magnetic switch setup - Resistance of sensor goes very high when door is OPEN, and very low when door is CLOSED.
-     * Internal pull-up resistor means that when door is closed, the pin will read HIGH, and when door is open, the pin will read LOW.
-     */
+     * Internal pull-up resistor means that when door is closed, the pin will read HIGH, and when door is open, the pin will read LOW. */
     pinMode(MAG_SWITCH_PIN, INPUT_PULLUP); //
     attachInterrupt(digitalPinToInterrupt(MAG_SWITCH_PIN), magSwitchISR, CHANGE);
 
-    /* Key sensor setup - We are using a push-button to simulate a key sensor.
-     */
+    /* Key sensor setup - We are using a push-button to simulate a key sensor. */
     pinMode(KEY_SENSOR_PIN, INPUT_PULLUP); // BUTTON
     attachInterrupt(digitalPinToInterrupt(KEY_SENSOR_PIN), keySensorISR, FALLING); // Trigger interrupt on falling edge (HIGH to LOW)
 
@@ -164,23 +166,7 @@ void setup() {
     pinMode(DISARMED_MODE_LED,OUTPUT);
     pinMode(PIR_LED,OUTPUT);
 
-    switch (system_mode) {
-        case ARMED:
-            digitalWrite(DISARMED_MODE_LED, LOW);
-            digitalWrite(AT_HOME_MODE_LED, LOW);
-            digitalWrite(ARMED_MODE_LED, HIGH);
-            break;
-        case AT_HOME:
-            digitalWrite(DISARMED_MODE_LED, LOW);
-            digitalWrite(ARMED_MODE_LED, LOW);
-            digitalWrite(AT_HOME_MODE_LED, HIGH);
-            break;
-        case DISARMED:
-            digitalWrite(AT_HOME_MODE_LED, LOW);
-            digitalWrite(ARMED_MODE_LED, LOW);
-            digitalWrite(DISARMED_MODE_LED, HIGH);
-            break;
-    }
+    toArmedMode(); // todo: change to disarmed mode, and figure out how to change mode without opening door etc.
 
 }
 
@@ -195,12 +181,46 @@ void loop() {
     if (door_state == DOOR_STATES::OPEN) { // triggered by door opening without unlocking
         unauthorizedEntry(UNAUTHORISED_ENTRY_METHODS::DOOR_OPENED);
     }
-//    if (pir_state == PIR_STATES::PRESENCE) { // triggered by PIR sensor
-//        unauthorizedEntry(UNAUTHORISED_ENTRY_METHODS::PIR_TRIGGERED);
-//    }
+    if (pir_state == PIR_STATES::PRESENCE) { // triggered by PIR sensor
+        unauthorizedEntry(UNAUTHORISED_ENTRY_METHODS::PIR_TRIGGERED);
+    }
+
+    // for when the Alarm times out, we need to switch verification window states on python end.
+    if ((verification_window_state == VERIFICATION_WINDOW_STATES::WINDOW_OPEN) && (timeSince_ms(security_timer) > ALARM_TIMEOUT)) {
+        verificationWindowClosed();
+        toDisarmedMode();
+    }
+
+    if (verification_window_state == VERIFICATION_WINDOW_STATES::WINDOW_CLOSED) {
+        changingMode();
+    }
+
+
     // TODO: Changing mode without unlocking door.
     // Check for mode change key from python
 }
+
+void toArmedMode(){
+    system_mode = SYSTEM_MODES::ARMED;
+    digitalWrite(DISARMED_MODE_LED, LOW);
+    digitalWrite(AT_HOME_MODE_LED, LOW);
+    digitalWrite(ARMED_MODE_LED, HIGH);
+}
+
+void toAtHomeMode(){
+    system_mode = SYSTEM_MODES::AT_HOME;
+    digitalWrite(DISARMED_MODE_LED, LOW);
+    digitalWrite(ARMED_MODE_LED, LOW);
+    digitalWrite(AT_HOME_MODE_LED, HIGH);
+}
+
+void toDisarmedMode(){
+    system_mode = SYSTEM_MODES::DISARMED;
+    digitalWrite(AT_HOME_MODE_LED, LOW);
+    digitalWrite(ARMED_MODE_LED, LOW);
+    digitalWrite(DISARMED_MODE_LED, HIGH);
+}
+
 
 /// ISRs
 void magSwitchISR() {
@@ -248,6 +268,7 @@ void keySensorISR() {
 
 void PIRSensorISR() {
     // The PIR does not need debouncing, it goes High for 8 seconds when motion is detected
+    pir_state = (PIR_STATES) digitalRead(PIR_PIN);
     if (pir_state == PIR_STATES::PRESENCE) {
         pir_state = PIR_STATES::PRESENCE;
         Serial.println("PIR state changed to: PRESENCE");
@@ -278,24 +299,14 @@ void changingMode() {
     Serial.println("Message received: " + message);
 
     if (message == "MODE: ARMED") {
-        system_mode = SYSTEM_MODES::ARMED;
-        digitalWrite(DISARMED_MODE_LED,LOW);
-        digitalWrite(AT_HOME_MODE_LED,LOW);
-        digitalWrite(ARMED_MODE_LED,HIGH);
-
+        toArmedMode();
     }
     else if (message == "MODE: AT-HOME") {
-        system_mode = SYSTEM_MODES::AT_HOME;
-        digitalWrite(DISARMED_MODE_LED,LOW);
-        digitalWrite(ARMED_MODE_LED,LOW);
-        digitalWrite(AT_HOME_MODE_LED,HIGH);
+        toAtHomeMode();
 
     }
     else if (message == "MODE: DISARMED") {
-        system_mode = SYSTEM_MODES::DISARMED;
-        digitalWrite(AT_HOME_MODE_LED,LOW);
-        digitalWrite(ARMED_MODE_LED,LOW);
-        digitalWrite(DISARMED_MODE_LED,HIGH);
+        toDisarmedMode();
     }
     security_timer = -10000; // reset security timer in case mode changed inside intermittent timeout window
     // TODO: Defensive programming for if (for some reason) the message is not one of the above
@@ -322,8 +333,11 @@ void verifyUser() {
         }
         else if (message == "VERIFICATION WINDOW CLOSED") { // This is for when the user enters the pin too many times.
             verification_window_state = VERIFICATION_WINDOW_STATES::WINDOW_CLOSED;
-
-        } else { // message is "NOT VERIFIED"
+        }
+        else if (message == "VERIFICATION WINDOW OPEN") {
+            verification_window_state = VERIFICATION_WINDOW_STATES::WINDOW_OPEN;
+        }
+        else { // message is "NOT VERIFIED"
             authorization_state = AUTHORISATION_STATES::UNAUTHORISED;
             return;
         }

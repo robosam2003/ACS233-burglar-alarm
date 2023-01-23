@@ -201,7 +201,7 @@ def verify_pin(face_verified):
     print(lastFour[-1])
     print(userFullPin)
 
-    if (len (keyCode) >= 40):
+    if (len (keyCode) >= 40): # Limits the user to 3 attempts at getting the pin right
         print("You've entered an incorrect pin too many times")
         print("(Python) CLOSING VERIFICATION WINDOW")
         verification_window_open = False
@@ -218,11 +218,6 @@ def verify_pin(face_verified):
         print("You used facial rec")
         return True
 
-
-
-
-
-
     if (face_verified == False) and (userFullPin == userPin):
         print("You did not use facial rec")
         return True
@@ -233,10 +228,42 @@ def verify_pin(face_verified):
 
     return False
 
-# TODO: Add limit to number of pin tries in a verification window
+def change_mode():
+    mode = -1  # TODO: This could be a function (repeated)
+    while mode not in [1, 2, 3]:
+        print("Please select a new system mode:\n 1: ARMED MODE\n 2: AT-HOME MODE\n 3: DISARMED MODE\n ")
+        mode = int(input())
+        if mode not in [1, 2, 3]:
+            print("Invalid mode selected. Please try again.")
+
+    s = ""
+    if mode == 1:
+        s = "ARMED"
+    elif mode == 2:
+        s = "AT-HOME"
+    elif mode == 3:
+        s = "DISARMED"
+    mode_string = "MODE: " + s + "\n"  # need the \n for Serial reading
+    mode_bytes = mode_string.encode()
+    ser.write(mode_bytes)
+    print("(Python) Wrote mode change bytes to serial")
+
+
 while True:
     try:
-        verify_face()
+        if verification_window_open == False: # For if the user wants to change mode from inside, with door locked
+            face_verified = verify_face()
+            verified = verify_pin(face_verified)
+            if verified:
+                change_mode()
+                verified = False
+                keyCode = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            else:
+                s = "\n"
+                slashnbytes = s.encode()
+                ser.write(slashnbytes)
+
+        # verify_face()
         # read line from serial
         line = ser.readline()
         line = line.decode()  # decode the bytes into a string
@@ -265,24 +292,7 @@ while True:
                 print("(Python) Wrote verified bytes to serial")
 
                 # Changing mode activity
-                mode = -1
-                while mode not in [1, 2, 3]:
-                    print("Please select a new system mode:\n 1: ARMED MODE\n 2: AT-HOME MODE\n 3: DISARMED MODE\n ")
-                    mode = int(input())
-                    if mode not in [1, 2, 3]:
-                        print("Invalid mode selected. Please try again.")
-
-                s = ""
-                if mode == 1:
-                    s = "ARMED"
-                elif mode == 2:
-                    s = "AT-HOME"
-                elif mode == 3:
-                    s = "DISARMED"
-                mode_string = "MODE: " + s + "\n"  # need the \n for Serial reading
-                mode_bytes = mode_string.encode()
-                ser.write(mode_bytes)
-                print("(Python) Wrote mode change bytes to serial")
+                change_mode()
             else:
                 # TODO: Add deleting of photos after 48 days - Req 8.11
                 not_verified_string = "NOT VERIFIED\n"  # need the \n for Serial reading
