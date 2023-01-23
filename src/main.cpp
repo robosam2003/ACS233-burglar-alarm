@@ -1,5 +1,5 @@
 /*
- * A burglar alarm system GROUP 4
+ * A burglar alarm system (GROUP 4) 23 Jan 2023
  *
  * This Program is the arduino end to a two piece inter-working software that runs
  * our burglar alarm system. It functions as follows, it monitors sensor inputs and reacts
@@ -22,8 +22,10 @@
  * ARMED - in armed mode all sensor input is taken into account, if PIR detects movement when the door is not unlocked
  * it will sound an alarm, if the reed sensor is activated without unlocking it will sound an alarm, if the user
  * fails to be authorised during the entry procedure it will sound an alarm.
- * AT_HOME
- * DISARMED
+ * AT_HOME - in at home mode the pir will not activate the alarm, everything else remains the same unauthorised entry
+ * will still set off an alarm
+ * DISARMED - in disarmed mode door will still lock but no authorisation will be needed, and no alarm will sound under
+ * any conditions.
  *
  * Authors: Samuel Scott, Eurico Benedict, Simon Desir, Alex Hicks, Yu-ta Chou
  */
@@ -49,15 +51,10 @@
 #define ARMED_MODE_LED 49 // Green
 #define PIR_LED 42 // ITS RED
 
-
 #define ALARM_LED 48 // ITS RED
-
 
 // Macros
 #define timeSince_ms(event) millis() - event
-
-
-
 
 /// Constants and enums
 // Enumerations to make the code more readable
@@ -97,7 +94,6 @@ enum VERIFICATION_WINDOW_STATES {
     WINDOW_OPEN = 1
 };
 
-
 // States
 SYSTEM_MODES system_mode = SYSTEM_MODES::ARMED; // initialised to DISARMED // TODO
 
@@ -118,8 +114,6 @@ int64_t last_door_open_time = -100000; // in ms
 int64_t last_door_close_time = -100000; // in ms
 int64_t last_alarm_on_time = 0;
 int64_t last_mode_change_time = 0;
-
-// TODO: Add prototypes for functions
 
 // TODO: unauthorized entry when password has not been inputted ( warning mode)
 
@@ -177,7 +171,6 @@ void loop() {
         authorizedEntry();
         delay(10);
     }
-
 
     // unauthorised entry
     if (door_state == DOOR_STATES::OPEN) { // triggered by door opening without unlocking
