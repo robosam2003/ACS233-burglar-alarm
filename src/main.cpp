@@ -9,13 +9,13 @@
  * PIR Sensor - used to detect motion
  * Magnetic Reed Sensor - used to detect door state (open/closed)
  * Button - used to detect unlocking of the door
- * Pyton stream - Used for user authorisation confirmation and mode change input
+ * Python stream - Used for user authorisation confirmation and mode change input
  *
  * Output devices are listed as follows;
  * Piezo buzzer - used as a warning or alarm sound output
  * Solenoid - used to lock and unlock door
  * LEDs - used as a status indicator
- * Pyton stream - Used for authorisation requests
+ * Python stream - Used for authorisation requests
  *
  * There are three modes programmed into the system and depending on the modes it is running on
  * the system behaves a different way.
