@@ -44,7 +44,8 @@
 
 #define ALARM_FREQ 500
 #define INTERMITTENT_TIMEOUT 15000 // 30 seconds
-#define ALARM_TIMEOUT (15*60*1000) // Should be 15 minutes in the end // TODO
+
+int64_t ALARM_TIMEOUT = 900000; // 15 minutes
 
 #define DISARMED_MODE_LED 47 // Red
 #define AT_HOME_MODE_LED 46 // Yellow
@@ -115,7 +116,6 @@ int64_t last_door_close_time = -100000; // in ms
 int64_t last_alarm_on_time = 0;
 int64_t last_mode_change_time = 0;
 
-// TODO: unauthorized entry when password has not been inputted ( warning mode)
 
 //ISR Prototypes
 void toArmedMode();
@@ -142,7 +142,7 @@ void setup() {
 
     /* Magnetic switch setup - Resistance of sensor goes very high when door is OPEN, and very low when door is CLOSED.
      * Internal pull-up resistor means that when door is closed, the pin will read HIGH, and when door is open, the pin will read LOW. */
-    pinMode(MAG_SWITCH_PIN, INPUT_PULLUP); //
+    pinMode(MAG_SWITCH_PIN, INPUT_PULLUP); // REED
     attachInterrupt(digitalPinToInterrupt(MAG_SWITCH_PIN), magSwitchISR, CHANGE);
 
     /* Key sensor setup - We are using a push-button to simulate a key sensor. */
@@ -155,9 +155,9 @@ void setup() {
     /* Buzzer setup */
     pinMode(BUZZER_PIN, OUTPUT);
 
-//    /* PIR setup */
-//    pinMode(PIR_PIN, INPUT);
-//    attachInterrupt(digitalPinToInterrupt(PIR_PIN), PIRSensorISR, CHANGE); // Trigger interrupt on change (LOW to HIGH or HIGH to LOW)
+    /* PIR setup */
+    pinMode(PIR_PIN, INPUT);
+    attachInterrupt(digitalPinToInterrupt(PIR_PIN), PIRSensorISR, CHANGE); // Trigger interrupt on change (LOW to HIGH or HIGH to LOW)
 
     /* Alarm LED setup */
     pinMode(ALARM_LED,OUTPUT);
@@ -166,8 +166,7 @@ void setup() {
     pinMode(DISARMED_MODE_LED,OUTPUT);
     pinMode(PIR_LED,OUTPUT);
 
-    toAtHomeMode(); // todo: change to disarmed mode, and figure out how to change mode without opening door etc.
-
+    toArmedMode(); // todo: change to disarmed mode
 }
 
 void loop() {
@@ -197,10 +196,8 @@ void loop() {
         changingMode();
     }
 
-
-    // TODO: Changing mode without unlocking door.
     // Check for mode change key from python
-}
+} // TODO: Add mode change time checks
 
 void toArmedMode(){
     system_mode = SYSTEM_MODES::ARMED;
@@ -208,6 +205,7 @@ void toArmedMode(){
     digitalWrite(AT_HOME_MODE_LED, LOW);
     digitalWrite(ARMED_MODE_LED, HIGH);
     security_timer = -10000; // reset security timer in case mode changed inside intermittent timeout window
+    last_mode_change_time = millis();
 }
 
 void toAtHomeMode() {
@@ -216,6 +214,7 @@ void toAtHomeMode() {
     digitalWrite(ARMED_MODE_LED, LOW);
     digitalWrite(AT_HOME_MODE_LED, HIGH);
     security_timer = -10000; // reset security timer in case mode changed inside intermittent timeout window
+    last_mode_change_time = millis();
 }
 
 void toDisarmedMode(){
@@ -224,6 +223,7 @@ void toDisarmedMode(){
     digitalWrite(ARMED_MODE_LED, LOW);
     digitalWrite(DISARMED_MODE_LED, HIGH);
     security_timer = -10000; // reset security timer in case mode changed inside intermittent timeout window
+    last_mode_change_time = millis();
 }
 
 
@@ -275,17 +275,20 @@ void PIRSensorISR() {
     // The PIR does not need debouncing, it goes High for 8 seconds when motion is detected
     pir_state = (PIR_STATES) digitalRead(PIR_PIN);
     if (pir_state == PIR_STATES::PRESENCE) {
-        pir_state = PIR_STATES::PRESENCE;
-        Serial.println("PIR state changed to: PRESENCE");
-        digitalWrite(PIR_LED,HIGH);
-        switch (system_mode) {
-            case (SYSTEM_MODES::ARMED):
-                verificationWindowOpen();
-                break;
-            case (SYSTEM_MODES::AT_HOME):
-            case (SYSTEM_MODES::DISARMED):
-            default:
-                break;
+        if ((timeSince_ms(last_mode_change_time) > 30000) &&
+            (timeSince_ms(last_door_open_time) > 30000)) {
+            pir_state = PIR_STATES::PRESENCE;
+            Serial.println("PIR state changed to: PRESENCE");
+            digitalWrite(PIR_LED, HIGH);
+            switch (system_mode) {
+                case (SYSTEM_MODES::ARMED):
+                    verificationWindowOpen();
+                    break;
+                case (SYSTEM_MODES::AT_HOME):
+                case (SYSTEM_MODES::DISARMED):
+                default:
+                    break;
+            }
         }
     }
     else {
@@ -296,8 +299,6 @@ void PIRSensorISR() {
 /// Functions
 
 void changingMode() {
-    // Uses/ incorporates verifyUser() function
-
     if (Serial.available()) { // wait for user input
         String message;
         // Read the serial port until a newline
@@ -311,8 +312,8 @@ void changingMode() {
         } else if (message == "MODE: DISARMED") {
             toDisarmedMode();
         }
-        // TODO: Defensive programming for if (for some reason) the message is not one of the above
     }
+
 //    else {
 //        Serial.println("(changingMode) No message received");
 //    }

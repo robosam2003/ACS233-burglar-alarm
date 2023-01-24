@@ -171,7 +171,7 @@ def set_up_key_press():
 def AdminMenu():
     global userPin, keyCode
     keyboard.unhook_all() #Unhooks keyboard interrupts
-    answer = input("Welcome back commander\n Would you like to change the PIN? Y/N?") # TODO: Make this proper english
+    answer = input("Welcome back admin\n Would you like to change the PIN? Y/N?") # TODO: Make this proper english
     if answer == 'Y':
         inputPIN0 = int(input("Enter new user PIN"))
         inputPIN1 = int(input("Enter PIN again to confirm"))
@@ -211,7 +211,9 @@ def verify_pin(face_verified):
         window_closed_string = "VERIFICATION WINDOW CLOSED\n"  # need the \n for Serial reading
         window_closed_bytes = window_closed_string.encode()
         ser.write(window_closed_bytes)
-        print("(Python) wrote window closed bytes")
+        if debug: print("(Python) wrote window closed bytes")
+
+        time.sleep(15*60)
 
     if (face_verified == True) and (userPin[0:4] == lastFour):
         #print("Now you're really in baby;)")
@@ -246,10 +248,12 @@ def change_mode():
     mode_string = "MODE: " + s + "\n"  # need the \n for Serial reading
     mode_bytes = mode_string.encode()
     ser.write(mode_bytes)
-    print("(Python) Wrote mode change bytes to serial")
+    if debug: print("(Python) Wrote mode change bytes to serial")
 
 
-while True:
+debug = True
+
+while True: # TODO: remove debug messages and
     try:
         if verification_window_open == False: # For if the user wants to change mode from inside, with door locked
             face_verified = verify_face()
@@ -263,19 +267,19 @@ while True:
         # read line from serial
         line = ser.readline()
         line = line.decode()  # decode the bytes into a string
-        if len(line) > 0: print("(Arduino) " + line, end="")
+        if len(line) > 0 and debug: print("(Arduino) " + line, end="")
         if line.startswith("VERIFICATION WINDOW OPEN"):
-            print("(Python) OPENING VERIFICATION WINDOW")
+            if debug: print("(Python) OPENING VERIFICATION WINDOW")
             verification_window_open = True
 
         elif line.startswith("VERIFICATION WINDOW CLOSED"):
-            print("(Python) CLOSING VERIFICATION WINDOW")
+            if debug: print("(Python) CLOSING VERIFICATION WINDOW")
             verification_window_open = False
             verified = False
             keyCode = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
         elif line.startswith("VERIFICATION REQUEST"):
-            print("(Python) THERE WAS A VERIFICATION REQUEST")
+            if debug: print("(Python) THERE WAS A VERIFICATION REQUEST")
 
             # Do the verification
             if (verification_window_open == True) and (verified == False):
@@ -285,7 +289,7 @@ while True:
                 verified_string = "VERIFIED\n"  # need the \n for Serial reading
                 verified_bytes = verified_string.encode()
                 ser.write(verified_bytes)
-                print("(Python) Wrote verified bytes to serial")
+                if debug: print("(Python) Wrote verified bytes to serial")
 
                 # Changing mode activity
                 change_mode()
@@ -294,7 +298,7 @@ while True:
                 not_verified_string = "NOT VERIFIED\n"  # need the \n for Serial reading
                 not_verified_bytes = not_verified_string.encode()
                 ser.write(not_verified_bytes)
-                print("(Python) wrote not verified bytes")
+                if debug: print("(Python) wrote not verified bytes")
                 currentTime= int(time.time_ns()/1000000)
                 filename = './unauth_photos/unauthIntruder%s.png' % (currentTime)
                 cv2.imwrite(filename, globalFrame)
