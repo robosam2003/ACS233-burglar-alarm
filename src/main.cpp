@@ -44,7 +44,7 @@
 
 #define ALARM_FREQ 500
 #define INTERMITTENT_TIMEOUT 15000 // 30 seconds
-#define ALARM_TIMEOUT (0.5*60*1000) // Should be 15 minutes in the end // TODO
+#define ALARM_TIMEOUT (15*60*1000) // Should be 15 minutes in the end // TODO
 
 #define DISARMED_MODE_LED 47 // Red
 #define AT_HOME_MODE_LED 46 // Yellow
@@ -155,9 +155,9 @@ void setup() {
     /* Buzzer setup */
     pinMode(BUZZER_PIN, OUTPUT);
 
-    /* PIR setup */
-    pinMode(PIR_PIN, INPUT);
-    attachInterrupt(digitalPinToInterrupt(PIR_PIN), PIRSensorISR, CHANGE); // Trigger interrupt on change (LOW to HIGH or HIGH to LOW)
+//    /* PIR setup */
+//    pinMode(PIR_PIN, INPUT);
+//    attachInterrupt(digitalPinToInterrupt(PIR_PIN), PIRSensorISR, CHANGE); // Trigger interrupt on change (LOW to HIGH or HIGH to LOW)
 
     /* Alarm LED setup */
     pinMode(ALARM_LED,OUTPUT);
@@ -166,7 +166,7 @@ void setup() {
     pinMode(DISARMED_MODE_LED,OUTPUT);
     pinMode(PIR_LED,OUTPUT);
 
-    toArmedMode(); // todo: change to disarmed mode, and figure out how to change mode without opening door etc.
+    toAtHomeMode(); // todo: change to disarmed mode, and figure out how to change mode without opening door etc.
 
 }
 
@@ -191,7 +191,9 @@ void loop() {
         toDisarmedMode();
     }
 
+
     if (verification_window_state == VERIFICATION_WINDOW_STATES::WINDOW_CLOSED) {
+        // Check for mode change, if verification window is closed (i.e. User is inside wanting to change mode before going out)
         changingMode();
     }
 
@@ -205,13 +207,15 @@ void toArmedMode(){
     digitalWrite(DISARMED_MODE_LED, LOW);
     digitalWrite(AT_HOME_MODE_LED, LOW);
     digitalWrite(ARMED_MODE_LED, HIGH);
+    security_timer = -10000; // reset security timer in case mode changed inside intermittent timeout window
 }
 
-void toAtHomeMode(){
+void toAtHomeMode() {
     system_mode = SYSTEM_MODES::AT_HOME;
     digitalWrite(DISARMED_MODE_LED, LOW);
     digitalWrite(ARMED_MODE_LED, LOW);
     digitalWrite(AT_HOME_MODE_LED, HIGH);
+    security_timer = -10000; // reset security timer in case mode changed inside intermittent timeout window
 }
 
 void toDisarmedMode(){
@@ -219,6 +223,7 @@ void toDisarmedMode(){
     digitalWrite(AT_HOME_MODE_LED, LOW);
     digitalWrite(ARMED_MODE_LED, LOW);
     digitalWrite(DISARMED_MODE_LED, HIGH);
+    security_timer = -10000; // reset security timer in case mode changed inside intermittent timeout window
 }
 
 
@@ -275,9 +280,9 @@ void PIRSensorISR() {
         digitalWrite(PIR_LED,HIGH);
         switch (system_mode) {
             case (SYSTEM_MODES::ARMED):
-            case (SYSTEM_MODES::AT_HOME):
                 verificationWindowOpen();
                 break;
+            case (SYSTEM_MODES::AT_HOME):
             case (SYSTEM_MODES::DISARMED):
             default:
                 break;
@@ -292,24 +297,25 @@ void PIRSensorISR() {
 
 void changingMode() {
     // Uses/ incorporates verifyUser() function
-    String message;
-    while (!Serial.available()); // wait for user input
-    // Read the serial port until a newline
-    message = Serial.readStringUntil('\n');
-    Serial.println("Message received: " + message);
 
-    if (message == "MODE: ARMED") {
-        toArmedMode();
-    }
-    else if (message == "MODE: AT-HOME") {
-        toAtHomeMode();
+    if (Serial.available()) { // wait for user input
+        String message;
+        // Read the serial port until a newline
+        message = Serial.readStringUntil('\n');
+        Serial.println("(changingMode) Message received: " + message);
 
+        if (message == "MODE: ARMED") {
+            toArmedMode();
+        } else if (message == "MODE: AT-HOME") {
+            toAtHomeMode();
+        } else if (message == "MODE: DISARMED") {
+            toDisarmedMode();
+        }
+        // TODO: Defensive programming for if (for some reason) the message is not one of the above
     }
-    else if (message == "MODE: DISARMED") {
-        toDisarmedMode();
-    }
-    security_timer = -10000; // reset security timer in case mode changed inside intermittent timeout window
-    // TODO: Defensive programming for if (for some reason) the message is not one of the above
+//    else {
+//        Serial.println("(changingMode) No message received");
+//    }
 }
 
 
@@ -320,7 +326,7 @@ void verifyUser() {
         while (!Serial.available()); // wait for user input
         // Read the serial port until a newline
         message = Serial.readStringUntil('\n');
-        Serial.println("Message received: " + message);
+        Serial.println("(verifyUser) Message received: " + message);
 
         if (message == "VERIFIED") {
             authorization_state = AUTHORISATION_STATES::AUTHORISED;
@@ -451,6 +457,7 @@ void authorizedEntry() {
                 digitalWrite(SOLENOID_PIN, LOW);
                 break;
             }
+//            changingMode();
         }
 
         // starts warning buzzer if door is open

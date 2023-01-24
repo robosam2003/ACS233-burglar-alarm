@@ -184,7 +184,7 @@ def AdminMenu():
     keyCode = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
 
-ser = serial.Serial("COM6", 9600, timeout=0.1)
+ser = serial.Serial("COM6", 9600, timeout=0.05)
 verification_window_open = False
 verified = False
 set_up_key_press()
@@ -198,8 +198,8 @@ def verify_pin(face_verified):
     lastFour = keyCode[-4:]
     userFullPin = keyCode[-10:]
 
-    print(lastFour[-1])
-    print(userFullPin)
+    # print(lastFour[-1])
+    # print(userFullPin)
 
     if (len (keyCode) >= 40): # Limits the user to 3 attempts at getting the pin right
         print("You've entered an incorrect pin too many times")
@@ -258,27 +258,23 @@ while True:
                 change_mode()
                 verified = False
                 keyCode = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-            else:
-                s = "\n"
-                slashnbytes = s.encode()
-                ser.write(slashnbytes)
 
         # verify_face()
         # read line from serial
         line = ser.readline()
         line = line.decode()  # decode the bytes into a string
-        print(line, end="")
+        if len(line) > 0: print("(Arduino) " + line, end="")
         if line.startswith("VERIFICATION WINDOW OPEN"):
             print("(Python) OPENING VERIFICATION WINDOW")
             verification_window_open = True
 
-        if line.startswith("VERIFICATION WINDOW CLOSED"):
+        elif line.startswith("VERIFICATION WINDOW CLOSED"):
             print("(Python) CLOSING VERIFICATION WINDOW")
             verification_window_open = False
             verified = False
             keyCode = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
-        if line.startswith("VERIFICATION REQUEST"):
+        elif line.startswith("VERIFICATION REQUEST"):
             print("(Python) THERE WAS A VERIFICATION REQUEST")
 
             # Do the verification
