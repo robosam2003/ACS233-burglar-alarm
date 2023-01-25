@@ -36,16 +36,17 @@
 
 /// Definitions
 #define MAG_SWITCH_PIN 2 // attached to interrupt
-#define KEY_SENSOR_PIN 3 // attached to interrupt -
-#define SOLENOID_PIN 12 // may be changed -
+#define KEY_SENSOR_PIN 3 // attached to interrupt
+#define SOLENOID_PIN 12 // may be changed
 
 #define BUZZER_PIN 7 //
 #define PIR_PIN 19
 
 #define ALARM_FREQ 500
-#define INTERMITTENT_TIMEOUT 15000 // 30 seconds
+#define INTERMITTENT_TIMEOUT 30000 // 30 seconds
 
 int64_t ALARM_TIMEOUT = 900000; // 15 minutes
+#define MODE_CHANGE_TIMEOUT 30000
 
 #define DISARMED_MODE_LED 47 // Red
 #define AT_HOME_MODE_LED 46 // Yellow
@@ -110,11 +111,11 @@ int64_t last_mag_switch_interrupt_time = 0; // in ms - used for debouncing
 int64_t last_key_sensor_interrupt_time = 0; // in ms - used for debouncing
 
 // Timers
-int64_t security_timer = 0; // in ms
+int64_t security_timer = -100000; // in ms
 int64_t last_door_open_time = -100000; // in ms
 int64_t last_door_close_time = -100000; // in ms
 int64_t last_alarm_on_time = 0;
-int64_t last_mode_change_time = 0;
+int64_t last_mode_change_time = -100000;
 
 
 //ISR Prototypes
@@ -166,7 +167,8 @@ void setup() {
     pinMode(DISARMED_MODE_LED,OUTPUT);
     pinMode(PIR_LED,OUTPUT);
 
-    toArmedMode(); // todo: change to disarmed mode
+    toAtHomeMode(); // todo: change to disarmed mode
+    last_mode_change_time = -100000; // reset last mode change time so that system works instantly
 }
 
 void loop() {
@@ -244,10 +246,13 @@ void magSwitchISR() {
             }
         }
         else { // door_state == DOOR_STATES::OPEN
+            Serial.println("Door was opened");
             switch (system_mode) {
                 case (SYSTEM_MODES::ARMED):
                 case (SYSTEM_MODES::AT_HOME):
-                    verificationWindowOpen();
+                    if (timeSince_ms(last_mode_change_time) > MODE_CHANGE_TIMEOUT) {
+                        verificationWindowOpen();
+                    }
                     break;
                 case (SYSTEM_MODES::DISARMED):
                 default:
@@ -275,14 +280,12 @@ void PIRSensorISR() {
     // The PIR does not need debouncing, it goes High for 8 seconds when motion is detected
     pir_state = (PIR_STATES) digitalRead(PIR_PIN);
     if (pir_state == PIR_STATES::PRESENCE) {
-        if ((timeSince_ms(last_mode_change_time) > 30000) &&
-            (timeSince_ms(last_door_open_time) > 30000)) {
-            pir_state = PIR_STATES::PRESENCE;
-            Serial.println("PIR state changed to: PRESENCE");
+        if (timeSince_ms(last_mode_change_time) > MODE_CHANGE_TIMEOUT) {
             digitalWrite(PIR_LED, HIGH);
             switch (system_mode) {
                 case (SYSTEM_MODES::ARMED):
                     verificationWindowOpen();
+                    Serial.println("PIR state changed to: PRESENCE");
                     break;
                 case (SYSTEM_MODES::AT_HOME):
                 case (SYSTEM_MODES::DISARMED):
@@ -290,7 +293,11 @@ void PIRSensorISR() {
                     break;
             }
         }
+        else {
+            pir_state = PIR_STATES::NO_PRESENCE;
+        }
     }
+
     else {
         digitalWrite(PIR_LED,LOW);
     }
@@ -313,10 +320,6 @@ void changingMode() {
             toDisarmedMode();
         }
     }
-
-//    else {
-//        Serial.println("(changingMode) No message received");
-//    }
 }
 
 
@@ -388,32 +391,38 @@ void alarmOff() {
 void unauthorizedEntry(UNAUTHORISED_ENTRY_METHODS method) {
     switch (method) {
         case DOOR_OPENED:
-            switch (system_mode) {
-                case (SYSTEM_MODES::ARMED):   // when cases don't have a break, they fall through to the next case (i.e. this means OR)
-                case (SYSTEM_MODES::AT_HOME):
-                    alarmOn(); // alarm switching on
-                    break;
-                case (SYSTEM_MODES::DISARMED):
-                    return;
-                default:
-                    break;
-            }
-
-            // Waiting for verified pin or 15 minutes elapsed
-            while ((authorization_state == AUTHORISATION_STATES::UNAUTHORISED) &&
-                    (timeSince_ms(last_alarm_on_time) < ALARM_TIMEOUT)) {
-                LEDblink(100,100);
-                verifyUser();
-                if (authorization_state == AUTHORISATION_STATES::AUTHORISED) {
-                    authorization_state = AUTHORISATION_STATES::UNAUTHORISED;
-                    break;
+            if ((timeSince_ms(security_timer) < INTERMITTENT_TIMEOUT) or
+                (timeSince_ms(last_mode_change_time) < MODE_CHANGE_TIMEOUT)) {
+                return;
+            } // if the security timer is less than 30 seconds, the alarm will not go off
+            else {
+                switch (system_mode) {
+                    case (SYSTEM_MODES::ARMED):   // when cases don't have a break, they fall through to the next case (i.e. this means OR)
+                    case (SYSTEM_MODES::AT_HOME):
+                        alarmOn(); // alarm switching on
+                        break;
+                    case (SYSTEM_MODES::DISARMED):
+                        return;
+                    default:
+                        break;
                 }
+
+                // Waiting for verified pin or 15 minutes elapsed
+                while ((authorization_state == AUTHORISATION_STATES::UNAUTHORISED) &&
+                       (timeSince_ms(last_alarm_on_time) < ALARM_TIMEOUT)) {
+                    LEDblink(100, 100);
+                    verifyUser();
+                    if (authorization_state == AUTHORISATION_STATES::AUTHORISED) {
+                        authorization_state = AUTHORISATION_STATES::UNAUTHORISED;
+                        break;
+                    }
+                }
+                alarmOff(); // This is needed when the alarm times out
             }
-            alarmOff(); // This is needed when the alarm times out
             break;
         case PIR_TRIGGERED:
-            if ((timeSince_ms(security_timer) < INTERMITTENT_TIMEOUT) or (timeSince_ms(last_mode_change_time) < INTERMITTENT_TIMEOUT)) {
-                break;
+            if ((timeSince_ms(security_timer) < INTERMITTENT_TIMEOUT) or (timeSince_ms(last_mode_change_time) < MODE_CHANGE_TIMEOUT)) {
+                return;
             } // if the security timer is less than 30 seconds, the alarm will not go off
             else {
                 switch (system_mode) {
@@ -446,8 +455,19 @@ void unauthorizedEntry(UNAUTHORISED_ENTRY_METHODS method) {
 
 void authorizedEntry() {
     // authorized entry
-//        Serial.println("UNLOCKING DOOR"); - Now happening in the ISR
-//        digitalWrite(SOLENOID_PIN, HIGH); // Unlock door
+    if (timeSince_ms(last_mode_change_time) < MODE_CHANGE_TIMEOUT) {
+        while (((timeSince_ms(security_timer) < 10000) && (lock_state == LOCK_STATES::UNLOCKED)) or
+               (door_state == DOOR_STATES::OPEN)) { }
+        // only re-lock if the lock is unlocked
+        // Door will re-lock after 10 seconds if not opened
+        // (i.e. unlocked but not entered)
+        if (lock_state == LOCK_STATES::UNLOCKED) {
+            Serial.println("LOCKING DOOR MC 2");
+            lock_state = LOCK_STATES::LOCKED;
+            digitalWrite(SOLENOID_PIN, LOW);
+        }
+        return;
+    }
     while ((timeSince_ms(security_timer) < INTERMITTENT_TIMEOUT) && (authorization_state == AUTHORISATION_STATES::UNAUTHORISED)) {
         if (door_state == DOOR_STATES::CLOSED) {
             if ((timeSince_ms(security_timer) > 10000) && (lock_state == LOCK_STATES::UNLOCKED)) { // only re-lock if the lock is unlocked
@@ -456,9 +476,8 @@ void authorizedEntry() {
                 Serial.println("LOCKING DOOR2");
                 lock_state = LOCK_STATES::LOCKED;
                 digitalWrite(SOLENOID_PIN, LOW);
-                break;
+                return;
             }
-//            changingMode();
         }
 
         // starts warning buzzer if door is open
@@ -478,7 +497,6 @@ void authorizedEntry() {
             default:
                 break;
         }
-
     }
 
     while ((authorization_state == AUTHORISATION_STATES::UNAUTHORISED) && (timeSince_ms(last_door_open_time) < ALARM_TIMEOUT)) {

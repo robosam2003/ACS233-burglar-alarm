@@ -17,6 +17,9 @@
 # Device storage - used to store images taken during failed logins
 # Monitor - used for showing user prompts like password input and mode changes
 #
+
+# This is based on the facerec_from_webcam_faster.py example from the face_recognition package.
+
 import time
 
 import face_recognition
@@ -90,6 +93,8 @@ process_this_frame = True
 
 
 globalFrame = 0
+
+debug = True
 
 def verify_face():
     # Grab a single frame of video
@@ -171,15 +176,20 @@ def set_up_key_press():
 def AdminMenu():
     global userPin, keyCode
     keyboard.unhook_all() #Unhooks keyboard interrupts
-    answer = input("Welcome back admin\n Would you like to change the PIN? Y/N?") # TODO: Make this proper english
+    answer = input("\nWelcome back admin\n Would you like to change the PIN? Y/N?")
+    while answer != 'Y' and answer != 'N':
+        answer = input("Please enter a valid answer (Y/N):  ")
     if answer == 'Y':
-        inputPIN0 = int(input("Enter new user PIN"))
-        inputPIN1 = int(input("Enter PIN again to confirm"))
+        inputPIN0 = int(input("Enter a 10 digit new user PIN:  "))
+        inputPIN1 = int(input("Enter PIN again to:  "))
+
         if inputPIN0 == inputPIN1:
             userPin = [int(x) for x in str(inputPIN0)]
+            userPin = userPin[0:10]
             print("PIN successfully changed. Have a nice day!")
-        # else:
-        #     # ...
+        else:
+            print("PINs do not match. Try again by typing in your admin pin")
+
     set_up_key_press()
     keyCode = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
@@ -195,15 +205,14 @@ adminPin = [2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
 
 def verify_pin(face_verified):
     global keyCode
+
     lastFour = keyCode[-4:]
     userFullPin = keyCode[-10:]
 
-    # print(lastFour[-1])
-    # print(userFullPin)
 
     if (len (keyCode) >= 40): # Limits the user to 3 attempts at getting the pin right
         print("You've entered an incorrect pin too many times")
-        print("(Python) CLOSING VERIFICATION WINDOW")
+        if debug: print("(Python) CLOSING VERIFICATION WINDOW")
         verification_window_open = False
         verified = False
         keyCode = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -226,7 +235,8 @@ def verify_pin(face_verified):
 
     if (userFullPin == adminPin):
         AdminMenu()
-        print("User Pin = ", userPin)
+        print("User Pin now set to = ", userPin)
+        print("Please enter your pin. ")
 
     return False
 
@@ -251,9 +261,13 @@ def change_mode():
     if debug: print("(Python) Wrote mode change bytes to serial")
 
 
-debug = True
+    print("Please input your pin:  ")
 
-while True: # TODO: remove debug messages and
+
+
+print("Please input your pin:  ")
+
+while True:
     try:
         if verification_window_open == False: # For if the user wants to change mode from inside, with door locked
             face_verified = verify_face()
@@ -267,9 +281,10 @@ while True: # TODO: remove debug messages and
         # read line from serial
         line = ser.readline()
         line = line.decode()  # decode the bytes into a string
-        if len(line) > 0 and debug: print("(Arduino) " + line, end="")
+        if (len(line) > 0 and debug): print("(Arduino) " + line, end="")
         if line.startswith("VERIFICATION WINDOW OPEN"):
             if debug: print("(Python) OPENING VERIFICATION WINDOW")
+            print("Alarm Sounding! Please input your pin:  ")
             verification_window_open = True
 
         elif line.startswith("VERIFICATION WINDOW CLOSED"):
@@ -302,6 +317,7 @@ while True: # TODO: remove debug messages and
                 currentTime= int(time.time_ns()/1000000)
                 filename = './unauth_photos/unauthIntruder%s.png' % (currentTime)
                 cv2.imwrite(filename, globalFrame)
+                print("You are currently unrecognized. A photo has been taken of you for security purposes. Enter your pin to verify your identity.") # Req 8.1.2
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
