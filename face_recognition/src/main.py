@@ -94,7 +94,7 @@ process_this_frame = True
 
 globalFrame = 0
 
-debug = True
+debug = False
 
 def verify_face():
     # Grab a single frame of video
