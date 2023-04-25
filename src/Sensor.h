@@ -8,7 +8,6 @@
 #include "Arduino.h"
 #include "constants.h"
 
-//// We cannot use inheritance because the interrupt service routine is static, and we use static variables.
 class Sensor {
 protected:
     uint8_t sensor_pin;
@@ -57,6 +56,30 @@ public:
     KEYSensor(uint8_t pin, void (*ISRFunc)()) : Sensor(pin, ISRFunc) {}
 };
 
+
+class LED {
+protected:
+    uint8_t LED_pin;
+public:
+    void setup() {
+        pinMode(this->LED_pin, OUTPUT);
+    }
+
+    void high() {
+        digitalWrite(LED_pin,HIGH);
+    }
+
+    void low() {
+        digitalWrite(LED_pin,LOW);
+    }
+
+    void blink(int delay0, int delay1) {
+        digitalWrite(LED_pin,HIGH);
+        delay(delay1);
+        digitalWrite(LED_pin,LOW);
+        delay(delay0);
+    }
+};
 
 
 

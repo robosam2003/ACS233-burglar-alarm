@@ -1,11 +1,13 @@
-//
-// Created by robos on 21/04/2023.
-//
+/** Controller.cpp - Created by robosam2003 on 21/04/2023.
+ *  This file contains the implementation of the Controller class methods - See Controller.h.
+ *
+ */
 
 #include "Controller.h"
 
+// This has to be done because the ISR functions are static and cannot access the instance of the class
+// This works for singleton (only one instance of the class) classes.
 Controller* Controller::instance = nullptr;
-
 
 
 // Constructor
@@ -56,7 +58,6 @@ void Controller::mag_isr() { // private because it is only called by the interru
     }
 
 }
-
 
 void Controller::pir_isr() {
     // The PIR does not need debouncing, it goes High for 8 seconds when motion is detected

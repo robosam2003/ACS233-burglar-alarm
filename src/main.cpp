@@ -26,7 +26,7 @@
 
 
 
-Controller cont(3);
+Controller cont(MAG_SWITCH_PIN, PIR_PIN, KEY_SENSOR_PIN);
 
 
 void setup() {
