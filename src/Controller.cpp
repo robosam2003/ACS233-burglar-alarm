@@ -65,7 +65,7 @@ void Controller::pir_isr() {
     if (pir->pir_state == PIR_STATES::PRESENCE) {
         pir->pir_state = PIR_STATES::PRESENCE;
         Serial.println("PIR state changed to: PRESENCE");
-//        digitalWrite(PIR_LED,HIGH); // TODO - LED class
+        pirLed->high();
         switch (system_mode) {
             case (SYSTEM_MODES::ARMED):
                 verificationWindowOpen();
@@ -77,7 +77,7 @@ void Controller::pir_isr() {
         }
     }
     else {
-//        digitalWrite(PIR_LED,LOW); // TODO - LED class
+        pirLed->low();
     }
 }
 
@@ -97,27 +97,27 @@ void Controller::key_isr() {
 
 void Controller::toArmedMode() {
     system_mode = SYSTEM_MODES::ARMED;
-//    digitalWrite(DISARMED_MODE_LED, LOW); // TODO - change to LED class
-//    digitalWrite(AT_HOME_MODE_LED, LOW);
-//    digitalWrite(ARMED_MODE_LED, HIGH);
+        disarmedModeLed->low(); //
+        atHomeModeLed->low();   //
+        armedModeLed->high();   //
     security_timer = -100000; // reset security timer in case mode changed inside intermittent timeout window
     last_mode_change_time = millis();
 }
 
 void Controller::toDisarmedMode() {
     system_mode = SYSTEM_MODES::DISARMED;
-//    digitalWrite(AT_HOME_MODE_LED, LOW); // TODO - change to LED class
-//    digitalWrite(ARMED_MODE_LED, LOW);
-//    digitalWrite(DISARMED_MODE_LED, HIGH);
+    disarmedModeLed->high(); //
+    atHomeModeLed->low();   //
+    armedModeLed->low();   //
     security_timer = -100000; // reset security timer in case mode changed inside intermittent timeout window
     last_mode_change_time = millis();
 }
 
 void Controller::toAtHomeMode() {
     system_mode = SYSTEM_MODES::AT_HOME;
-//    digitalWrite(DISARMED_MODE_LED, LOW); // TODO - change to LED class
-//    digitalWrite(ARMED_MODE_LED, LOW);
-//    digitalWrite(AT_HOME_MODE_LED, HIGH);
+    disarmedModeLed->low(); //
+    atHomeModeLed->high();   //
+    armedModeLed->low();   //
     security_timer = -100000; // reset security timer in case mode changed inside intermittent timeout window
     last_mode_change_time = millis();
 }
@@ -200,7 +200,7 @@ void Controller::unauthorizedEntry(UNAUTHORISED_ENTRY_METHODS method) {
             // Waiting for verified pin or 15 minutes elapsed
             while ((authorization_state == AUTHORISATION_STATES::UNAUTHORISED) &&
                    (timeSince_ms(last_alarm_on_time) < ALARM_TIMEOUT)) {
-//                LEDblink(100,100); // TODO - LED class
+                alarmLed->blink(100,100);
                 verifyUser();
                 if (authorization_state == AUTHORISATION_STATES::AUTHORISED) {
                     authorization_state = AUTHORISATION_STATES::UNAUTHORISED;
@@ -231,7 +231,7 @@ void Controller::unauthorizedEntry(UNAUTHORISED_ENTRY_METHODS method) {
 
                 // Waiting for verified pin or 15 minutes elapsed
                 while (authorization_state == AUTHORISATION_STATES::UNAUTHORISED && timeSince_ms(last_alarm_on_time) < ALARM_TIMEOUT) {
-//                    LEDblink(100,100); // TODO - LED class
+                    alarmLed->blink(100,100);
                     verifyUser();
                     if (authorization_state == AUTHORISATION_STATES::AUTHORISED) {
                         authorization_state = AUTHORISATION_STATES::UNAUTHORISED;
