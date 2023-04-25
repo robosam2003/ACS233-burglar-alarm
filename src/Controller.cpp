@@ -157,7 +157,7 @@ void Controller::verifyUser() {
         if (message == "VERIFIED") {
             authorization_state = AUTHORISATION_STATES::AUTHORISED;
             Serial.println("I RECEIVED YOUR VERIFIED MESSAGE");
-//            alarmOff(); // TODO - Buzzer class
+            buzzer->on(); // turns on Buzzer
 
             while (!Serial.available()); // wait but only on this one
             changingMode();
@@ -212,7 +212,7 @@ void Controller::unauthorizedEntry(UNAUTHORISED_ENTRY_METHODS method) {
             switch (system_mode) {
                 case (SYSTEM_MODES::ARMED):   // when cases don't have a break, they fall through to the next case (i.e. this means OR)
                 case (SYSTEM_MODES::AT_HOME):
-//                    alarmOn(); // alarm switching on // TODO - Buzzer class
+                     buzzer->on(); // turns on Buzzer
                     break;
                 case (SYSTEM_MODES::DISARMED):
                     return;
@@ -231,7 +231,7 @@ void Controller::unauthorizedEntry(UNAUTHORISED_ENTRY_METHODS method) {
                     break;
                 }
             }
-//            alarmOff(); // This is needed when the alarm times out // TODO - Buzzer class
+            buzzer->off(); // turns on Buzzer
             break;
         case PIR_TRIGGERED:
             if ((timeSince_ms(security_timer) < INTERMITTENT_TIMEOUT)) {
@@ -240,7 +240,7 @@ void Controller::unauthorizedEntry(UNAUTHORISED_ENTRY_METHODS method) {
             else {
                 switch (system_mode) {
                     case (SYSTEM_MODES::ARMED):   // when cases don't have a break, they fall through to the next case (i.e. this means OR)
-//                        alarmOn(); // alarm switching on // TODO - Buzzer class
+                        buzzer->on(); // turns on Buzzer
                         break;
                     case (SYSTEM_MODES::AT_HOME):
                     case (SYSTEM_MODES::DISARMED):
@@ -262,7 +262,7 @@ void Controller::unauthorizedEntry(UNAUTHORISED_ENTRY_METHODS method) {
                         break;
                     }
                 }
-//                alarmOff(); // This is needed when the alarm times out // TODO - Buzzer class
+                buzzer->off(); // turns on Buzzer
             }
             break;
     }
