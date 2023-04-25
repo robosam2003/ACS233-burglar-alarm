@@ -26,15 +26,21 @@
 
 
 
-Controller cont(MAG_SWITCH_PIN, PIR_PIN, KEY_SENSOR_PIN);
+Controller steve(MAG_SWITCH_PIN, PIR_PIN, KEY_SENSOR_PIN,
+                 DISARMED_MODE_LED, AT_HOME_MODE_LED, ARMED_MODE_LED, PIR_LED, ALARM_LED,
+                 SOLENOID_PIN, BUZZER_PIN);
 
 
 void setup() {
-    cont.setup();
+    steve.setup();
+
+    steve.toAtHomeMode();
+
 }
 
 
 void loop() {
     // put your main code here, to run repeatedly:
+
 
 }

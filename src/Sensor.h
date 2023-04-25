@@ -53,6 +53,13 @@ public:
 
 class KEYSensor : public Sensor {
 public:
+    uint8_t setup() {
+        pinMode(this->sensor_pin, INPUT_PULLUP);
+        if (_isr != nullptr) { // Not all sensors have an ISR
+            attachInterrupt(digitalPinToInterrupt(this->sensor_pin), _isr, FALLING);
+        }
+        return 0;
+    }
     KEYSensor(uint8_t pin, void (*ISRFunc)()) : Sensor(pin, ISRFunc) {}
 };
 
@@ -61,7 +68,8 @@ class LED {
 protected:
     uint8_t LED_pin;
 public:
-    void setup() {
+    LED(uint8_t pin) {
+        uint8_t LED_pin = pin;
         pinMode(this->LED_pin, OUTPUT);
     }
 
@@ -73,11 +81,11 @@ public:
         digitalWrite(LED_pin,LOW);
     }
 
-    void blink(int delay0, int delay1) {
+    void blink(int onDelay, int offDelay) {
         digitalWrite(LED_pin,HIGH);
-        delay(delay1);
+        delay(onDelay);
         digitalWrite(LED_pin,LOW);
-        delay(delay0);
+        delay(offDelay);
     }
 };
 

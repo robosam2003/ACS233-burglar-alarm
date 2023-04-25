@@ -11,18 +11,34 @@ Controller* Controller::instance = nullptr;
 
 
 // Constructor
-Controller::Controller(int mag_sensor_pin, int pir_sensor_pin, int key_sensor_pin) {
+Controller::Controller(int mag_sensor_pin, int pir_sensor_pin, int key_sensor_pin,
+                       int disarmed_mode_led, int at_home_mode_led, int armed_mode_led,
+                       int pir_led, int alarm_led, int solenoid_pin, int buzzer_pin) {
     instance = this;
-    mag = new MAGSensor(mag_sensor_pin, MAGISRFunc);
-    pir = new PIRSensor(pir_sensor_pin, PIRISRFunc);
+//    mag = new MAGSensor(mag_sensor_pin, MAGISRFunc);
+//    pir = new PIRSensor(pir_sensor_pin, PIRISRFunc);
     key = new KEYSensor(key_sensor_pin, KEYISRFunc);
+
+//    disarmedModeLed = new LED(disarmed_mode_led);
+//    atHomeModeLed = new LED(at_home_mode_led);
+//    armedModeLed = new LED(armed_mode_led);
+//
+//    pirLed = new LED(pir_led);
+//    alarmLed = new LED(alarm_led);
+//
+    lock = new Solenoid(solenoid_pin);
+//    buzzer = new Buzzer(buzzer_pin);
+
+    last_mode_change_time = -100000; // reset last mode change time so that system works instantly
+
 }
 
 void Controller::setup() {
-    mag->setup();
+    Serial.begin(115200);
+//    mag->setup();
+//    pir->setup();
+    key->setup();
 }
-
-
 
 void Controller::mag_isr() { // private because it is only called by the interrupt service routine
 
@@ -32,29 +48,28 @@ void Controller::mag_isr() { // private because it is only called by the interru
         Serial.print("mag_isr() was triggered  a=");
         mag->door_state = (DOOR_STATES) mag->read();
 
-//        if (mag->door_state == DOOR_STATES::CLOSED) { // TODO - Solenoid class
-//            Serial.println("Door was closed");
-//            last_door_close_time = millis();
-//            if (lock_state == LOCK_STATES::UNLOCKED) { // TODO - Solenoid class
-//                // If the door gets closed and the lock is unlocked, lock the door
-//                Serial.println("LOCKING DOOR1");
-//                lock_state = LOCK_STATES::LOCKED; // TODO - Solenoid class
-//                digitalWrite(SOLENOID_PIN, LOW); // TODO - Solenoid class
-//            }
-//        }
-//        else { // door_state == DOOR_STATES::OPEN
-//            Serial.println("Door was opened");
-//            switch (system_mode) {
-//                case (SYSTEM_MODES::ARMED):
-//                case (SYSTEM_MODES::AT_HOME):
-//                    verificationWindowOpen();
-//                    break;
-//                case (SYSTEM_MODES::DISARMED):
-//                default:
-//                    break;
-//            }
-//            last_door_open_time = millis();
-//        }
+        if (mag->door_state == DOOR_STATES::CLOSED) {
+            Serial.println("Door was closed");
+            last_door_close_time = millis();
+            if (lock->state == LOCK_STATES::UNLOCKED) {
+                // If the door gets closed and the lock is unlocked, lock the door
+                Serial.println("LOCKING DOOR1");
+                lock->lock();
+            }
+        }
+        else { // door_state == DOOR_STATES::OPEN
+            Serial.println("Door was opened");
+            switch (system_mode) {
+                case (SYSTEM_MODES::ARMED):
+                case (SYSTEM_MODES::AT_HOME):
+                    verificationWindowOpen();
+                    break;
+                case (SYSTEM_MODES::DISARMED):
+                default:
+                    break;
+            }
+            last_door_open_time = millis();
+        }
     }
 
 }
@@ -82,17 +97,25 @@ void Controller::pir_isr() {
 }
 
 void Controller::key_isr() {
+//    Serial.println("The key was pressed");
     if (timeSince_ms(key->last_interrupt_time) > 100) { // debounce the interrupt using millis()
         security_timer = millis(); // start the security timer
         Serial.println("UNLOCKING DOOR");
 
         // Unlock the door
-//        digitalWrite(SOLENOID_PIN, HIGH); // Unlock door // TODO - Solenoid class
-//        lock_state = LOCK_STATES::UNLOCKED; // TODO - Solenoid class
-
-        Serial.println("Lock state changed to: UNLOCKED");
+        if (lock->state == LOCK_STATES::LOCKED)
+            lock->unlock();
+        else
+            lock->lock();
+//        lock->unlock();
+//        Serial.println("Lock state changed to: UNLOCKED");
+//        delay(1000);
+//        lock->lock();
+//        Serial.println("Lock state changed to: LOCKED");
     }
     key->last_interrupt_time = millis();
+
+
 }
 
 void Controller::toArmedMode() {
@@ -243,6 +266,15 @@ void Controller::unauthorizedEntry(UNAUTHORISED_ENTRY_METHODS method) {
             }
             break;
     }
+}
+
+void Controller::alarmOn() {
+    buzzer->on(); // turns on Buzzer
+    last_alarm_on_time = millis();
+}
+
+void Controller::alarmOff() {
+    buzzer->off(); // turns on Buzzer
 }
 
 

@@ -5,17 +5,24 @@
 #ifndef ACS233_BURGLAR_ALARM_BUZZER_H
 #define ACS233_BURGLAR_ALARM_BUZZER_H
 
+#include "Arduino.h"
 
 class Buzzer {
-    protected:
+private:
     uint8_t BUZZER_PIN;
 
-    public:
-    void state_high(uint8_t BUZZER_PIN){
-        digitalWrite(BUZZER_PIN, HIGH);
+public:
+
+    Buzzer(uint8_t pin){
+        uint8_t BUZZER_PIN = pin;
+        pinMode(this->BUZZER_PIN, OUTPUT);
     }
-    void state_low(uint8_t BUZZER_PIN){
-        digitalWrite(BUZZER_PIN, LOW);
+
+    void on() {
+        tone(BUZZER_PIN, 500);
+    }
+    void off() {
+        noTone(BUZZER_PIN);
     }
 };
 

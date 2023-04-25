@@ -10,7 +10,7 @@ set(CMAKE_SYSTEM_NAME Generic)
 set(CMAKE_C_COMPILER_WORKS 1)
 set(CMAKE_CXX_COMPILER_WORKS 1)
 
-project("ACS233-burglar-alarm" C CXX)
+project("ACS233_group4_burglar" C CXX)
 
 include(CMakeListsPrivate.txt)
 
@@ -30,4 +30,4 @@ add_custom_target(
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-add_executable(Z_DUMMY_TARGET ${SRC_LIST} src/main.cpp src/Sensor.h src/Controller.cpp src/Controller.h src/constants.h src/Buzzer.cpp src/Buzzer.h)
+add_executable(Z_DUMMY_TARGET ${SRC_LIST})

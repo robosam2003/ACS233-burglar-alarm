@@ -12,9 +12,11 @@ class Solenoid {
     public:
     void state_high (uint8_t SOLENOID_PIN){
         digitalWrite(SOLENOID_PIN, HIGH);
+        state = LOCK_STATES::UNLOCKED;
     }
     void state_low (uint8_t SOLENOID_PIN){
         digitalWrite(SOLENOID_PIN, LOW);
+        state = LOCK_STATES::LOCKED;
     }
 };
 

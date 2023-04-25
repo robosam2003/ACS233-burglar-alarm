@@ -7,13 +7,16 @@
 #include "Arduino.h"
 #include "Sensor.h"
 #include "constants.h"
+#include "Solenoid.h"
+#include "Buzzer.h"
 
 
 // Definitions
 #define ALARM_FREQ 500
 #define INTERMITTENT_TIMEOUT 20000 // 30 seconds
 
-int64_t ALARM_TIMEOUT = 30000; // 15 minutes
+
+#define ALARM_TIMEOUT 30000 // 15 minutes
 #define MODE_CHANGE_TIMEOUT 30000
 
 // Macros
@@ -36,6 +39,18 @@ private:
     PIRSensor* pir;
     KEYSensor* key;
 
+    LED* disarmedModeLed;
+    LED* atHomeModeLed;
+    LED* armedModeLed;
+
+    LED* pirLed;
+    LED* alarmLed;
+
+    Solenoid* lock;
+    Buzzer* buzzer;
+
+
+
     void mag_isr();
     void pir_isr();
     void key_isr();
@@ -44,7 +59,9 @@ public:
     static Controller* instance; // Needed to make the interrupt service routines work in a class
 
     // Constructor
-    explicit Controller(int mag_sensor_pin, int pir_sensor_pin, int key_sensor_pin);
+    explicit Controller(int mag_sensor_pin, int pir_sensor_pin, int key_sensor_pin,
+                        int disarmed_mode_led, int at_home_mode_led, int armed_mode_led,
+                        int pir_led, int alarm_led,int solenoid_pin,int buzzer_pin);
 
     // Setup
     void setup();
@@ -71,8 +88,9 @@ public:
     void verificationWindowOpen();
     void verificationWindowClosed();
     void changingMode();
-//    void alarmOn();  // TODO Buzzer class
-//    void alarmOff();
+
+    void alarmOn();  // TODO Buzzer class
+    void alarmOff();
 
     void unauthorizedEntry(UNAUTHORISED_ENTRY_METHODS method);
     void authorizedEntry();
