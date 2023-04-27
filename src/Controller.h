@@ -12,15 +12,16 @@
 
 
 // Definitions
-#define ALARM_FREQ 500
-#define INTERMITTENT_TIMEOUT 20000 // 30 seconds
+#define INTERMITTENT_TIMEOUT 30000 // 30 seconds
 
 
-#define ALARM_TIMEOUT 30000 // 15 minutes
+// Lesson learned - don't do complex mathematical expressions in #defines
+#define ALARM_TIMEOUT 900000 // 15 minutes
+
 #define MODE_CHANGE_TIMEOUT 30000
 
 // Macros
-#define timeSince_ms(event) millis() - event
+#define timeSince_ms(event) (millis() - event)
 
 class Controller {
 private:
@@ -30,7 +31,7 @@ private:
     int64_t last_alarm_on_time = 0;
     int64_t last_mode_change_time = -100000;
 
-    SYSTEM_MODES system_mode = DISARMED;
+    SYSTEM_MODES system_mode = AT_HOME;
 
     AUTHORISATION_STATES authorization_state = AUTHORISATION_STATES::UNAUTHORISED; //id password authorization_state variable
     VERIFICATION_WINDOW_STATES verification_window_state = VERIFICATION_WINDOW_STATES::WINDOW_CLOSED;
@@ -60,8 +61,8 @@ public:
 
     // Constructor
     explicit Controller(int mag_sensor_pin, int pir_sensor_pin, int key_sensor_pin,
-                        int disarmed_mode_led, int at_home_mode_led, int armed_mode_led,
-                        int pir_led, int alarm_led,int solenoid_pin,int buzzer_pin);
+                        int disarmed_mode_led, int at_home_mode_led, int armed_mode_led, int pir_led, int alarm_led,
+                        int solenoid_pin,int buzzer_pin);
 
     // Setup
     void setup();
@@ -95,6 +96,7 @@ public:
     void unauthorizedEntry(UNAUTHORISED_ENTRY_METHODS method);
     void authorizedEntry();
 
+    void loop();
 
     // Destructor
     ~Controller() {

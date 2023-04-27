@@ -40,7 +40,9 @@ import keyboard
 # specific demo. If you have trouble installing it, try any of the other demos that don't require it instead.
 
 # Get a reference to webcam #0 (the default one)
+print("Starting up webcam...")
 video_capture = cv2.VideoCapture(0)
+print("Webcam started")
 
 # # Load a sample picture and learn how to recognize it.
 # obama_image = face_recognition.load_image_file("obama.jpg")
@@ -56,14 +58,14 @@ sam_face_encoding = face_recognition.face_encodings(sam_image)[0]
 # eurico_image = face_recognition.load_image_file("eurico1.jpg")
 # eurico_face_encoding = face_recognition.face_encodings(eurico_image)[0]
 
-alex_image = face_recognition.load_image_file("Alex1.jpg")
-alex_face_encoding = face_recognition.face_encodings(alex_image)[0]
-
-simon_image = face_recognition.load_image_file("simon1.jpg")
-simon_face_encoding = face_recognition.face_encodings(simon_image)[0]
-
-tara_image = face_recognition.load_image_file("tara1.jpg")
-tara_face_encoding = face_recognition.face_encodings(tara_image)[0]
+# alex_image = face_recognition.load_image_file("Alex1.jpg")
+# alex_face_encoding = face_recognition.face_encodings(alex_image)[0]
+#
+# simon_image = face_recognition.load_image_file("simon1.jpg")
+# simon_face_encoding = face_recognition.face_encodings(simon_image)[0]
+#
+# tara_image = face_recognition.load_image_file("tara1.jpg")
+# tara_face_encoding = face_recognition.face_encodings(tara_image)[0]
 
 # Create arrays of known face encodings and their names
 known_face_encodings = [
@@ -71,18 +73,18 @@ known_face_encodings = [
     # biden_face_encoding,
     sam_face_encoding,
     # eurico_face_encoding,
-    alex_face_encoding,
-    simon_face_encoding,
-    tara_face_encoding
+    # alex_face_encoding,
+    # simon_face_encoding,
+    # tara_face_encoding
 ]
 known_face_names = [
     # "Barack Obama",
     # "Joe Biden",
     "Sam Scott",
     # "Eurico Benedict",
-    "Alex Hicks",
-    "Simon Desir",
-    "Tara Baldacchino"
+    # "Alex Hicks",
+    # "Simon Desir",
+    # "Tara Baldacchino"
 ]
 
 # Initialize some variables
@@ -94,7 +96,7 @@ process_this_frame = True
 
 globalFrame = 0
 
-debug = False
+debug = True
 
 def verify_face():
     # Grab a single frame of video
@@ -173,6 +175,7 @@ def set_up_key_press():
     keyboard.on_press_key('9', lambda _: keyCode.append(9))
     keyboard.on_press_key('0', lambda _: keyCode.append(0))
 
+
 def AdminMenu():
     global userPin, keyCode
     keyboard.unhook_all() #Unhooks keyboard interrupts
@@ -194,7 +197,7 @@ def AdminMenu():
     keyCode = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
 
-ser = serial.Serial("COM6", 9600, timeout=0.05)
+ser = serial.Serial("COM6", 115200, timeout=0.05)
 verification_window_open = False
 verified = False
 set_up_key_press()
@@ -209,7 +212,6 @@ def verify_pin(face_verified):
     lastFour = keyCode[-4:]
     userFullPin = keyCode[-10:]
 
-
     if (len (keyCode) >= 40): # Limits the user to 3 attempts at getting the pin right
         print("You've entered an incorrect pin too many times")
         if debug: print("(Python) CLOSING VERIFICATION WINDOW")
@@ -222,7 +224,7 @@ def verify_pin(face_verified):
         ser.write(window_closed_bytes)
         if debug: print("(Python) wrote window closed bytes")
 
-        time.sleep(15*60)
+        time.sleep(15*60*2)
 
     if (face_verified == True) and (userPin[0:4] == lastFour):
         #print("Now you're really in baby;)")

@@ -15,7 +15,6 @@
 #define BUZZER_PIN 7 //
 #define PIR_PIN 19
 
-
 #define DISARMED_MODE_LED 47 // Red
 #define AT_HOME_MODE_LED 46 // Yellow
 #define ARMED_MODE_LED 49 // Green
@@ -24,23 +23,17 @@
 #define ALARM_LED 48 // ITS RED
 
 
-
-
-Controller steve(MAG_SWITCH_PIN, PIR_PIN, KEY_SENSOR_PIN,
-                 DISARMED_MODE_LED, AT_HOME_MODE_LED, ARMED_MODE_LED, PIR_LED, ALARM_LED,
-                 SOLENOID_PIN, BUZZER_PIN);
+Controller cont(MAG_SWITCH_PIN, PIR_PIN, KEY_SENSOR_PIN,
+                DISARMED_MODE_LED, AT_HOME_MODE_LED, ARMED_MODE_LED, PIR_LED, ALARM_LED,
+                SOLENOID_PIN, BUZZER_PIN);
 
 
 void setup() {
-    steve.setup();
-
-    steve.toAtHomeMode();
-
+    cont.setup();
+    cont.toAtHomeMode() ;
 }
 
-
 void loop() {
-    // put your main code here, to run repeatedly:
-
+    cont.loop();
 
 }

@@ -7,6 +7,9 @@
 
 #include "Arduino.h"
 
+#define ALARM_FREQ 500
+
+
 class Buzzer {
 private:
     uint8_t BUZZER_PIN;
@@ -14,15 +17,23 @@ private:
 public:
 
     Buzzer(uint8_t pin){
-        uint8_t BUZZER_PIN = pin;
+        BUZZER_PIN = pin;
         pinMode(this->BUZZER_PIN, OUTPUT);
     }
 
-    void on() {
-        tone(BUZZER_PIN, 500);
+    void on() const {
+        tone(BUZZER_PIN, ALARM_FREQ);
     }
-    void off() {
+
+    void off() const {
         noTone(BUZZER_PIN);
+    }
+
+    void beep(int freq, int onDel,int offDel) const {
+        tone(BUZZER_PIN, freq);
+        delay(onDel);
+        noTone(BUZZER_PIN);
+        delay(offDel);
     }
 };
 

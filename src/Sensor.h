@@ -36,6 +36,13 @@ public:
 class MAGSensor : public Sensor {
 public:
     DOOR_STATES door_state;
+    uint8_t setup() {
+        pinMode(this->sensor_pin, INPUT_PULLUP);
+        if (_isr != nullptr) { // Not all sensors have an ISR
+            attachInterrupt(digitalPinToInterrupt(this->sensor_pin), _isr, CHANGE);
+        }
+        return 0;
+    }
 
     MAGSensor(uint8_t pin, void (*ISRFunc)()) : Sensor(pin, ISRFunc) {
         this->door_state = (DOOR_STATES) this->read();
@@ -68,20 +75,20 @@ class LED {
 protected:
     uint8_t LED_pin;
 public:
-    LED(uint8_t pin) {
-        uint8_t LED_pin = pin;
-        pinMode(this->LED_pin, OUTPUT);
+    explicit LED(uint8_t pin) {
+        LED_pin = pin;
+        pinMode(LED_pin, OUTPUT);
     }
 
-    void high() {
+    void high() const {
         digitalWrite(LED_pin,HIGH);
     }
 
-    void low() {
+    void low() const {
         digitalWrite(LED_pin,LOW);
     }
 
-    void blink(int onDelay, int offDelay) {
+    void blink(int onDelay, int offDelay) const {
         digitalWrite(LED_pin,HIGH);
         delay(onDelay);
         digitalWrite(LED_pin,LOW);
