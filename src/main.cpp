@@ -1,6 +1,34 @@
-//
-// Created by robos on 24/02/2023.
-//
+// * A burglar alarm system (GROUP 4) 23 Jan 2023
+// * Authors: Samuel Scott, Eurico Benedict, Simon Desir, Alex Hicks, Yu-ta Chou
+// *
+// * This program is the arduino end to a two piece inter-working software that runs
+// * the burglar alarm system. It functions as follows, it monitors sensor inputs and reacts
+// * accordingly.
+// *
+// * Input devices are listed as follows;
+// * PIR Sensor - used to detect motion
+// * Magnetic Reed Sensor - used to detect door state (open/closed)
+// * Button - used to detect unlocking of the door
+// * Python serial stream - Used for user authorisation confirmation and mode change input
+// *
+// * Output devices are listed as follows;
+// * Piezo buzzer - used as a warning or alarm sound output
+// * Solenoid - used to lock and unlock door
+// * LEDs - used as a status indicator
+// * Python serial stream - Used for authorisation requests
+// *
+// * There are three modes programmed into the system and depending on the modes it is running on
+// * the system behaves a different way.
+// * ARMED - in armed mode all sensor input is taken into account, if PIR detects movement when the door is not unlocked
+// * it will sound an alarm, if the reed sensor is activated without unlocking it will sound an alarm, if the user
+// * fails to be authorised during the entry procedure it will sound an alarm.
+// * AT_HOME - in at home mode the pir will not activate the alarm, everything else remains the same unauthorised entry
+// * will still set off an alarm
+// * DISARMED - in disarmed mode door will still lock but no authorisation will be needed, and no alarm will sound under
+// * any conditions.
+
+// 5th May 2023 - the program is split into its component classes with the OOP programming method
+
 
 
 #include "Arduino.h"
