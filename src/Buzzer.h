@@ -1,6 +1,7 @@
 //
 // Created by bened on 4/24/2023.
 //
+// Buzzer class for the alarm system, allows for buzzer to be turn on and off.
 
 #ifndef ACS233_BURGLAR_ALARM_BUZZER_H
 #define ACS233_BURGLAR_ALARM_BUZZER_H
