@@ -28,7 +28,7 @@ import numpy as np
 import serial
 import asyncio
 import keyboard
-
+from tkinter import *
 
 # This is a demo of running face recognition on live video from your webcam. It's a little more complicated than the
 # other example, but it includes some basic performance tweaks to make things run a lot faster:
@@ -92,7 +92,6 @@ face_locations = []
 face_encodings = []
 face_names = []
 process_this_frame = True
-
 
 globalFrame = 0
 
@@ -162,22 +161,22 @@ def verify_face():
         pass
     return isThereAVerifiedFaceThere
 
-
+# --------------------------------------------------------------------------------
 def set_up_key_press():
-    keyboard.on_press_key('1', lambda _: keyCode.append(1))  # adds pin to a buffer
-    keyboard.on_press_key('2', lambda _: keyCode.append(2))
-    keyboard.on_press_key('3', lambda _: keyCode.append(3))
-    keyboard.on_press_key('4', lambda _: keyCode.append(4))
-    keyboard.on_press_key('5', lambda _: keyCode.append(5))
-    keyboard.on_press_key('6', lambda _: keyCode.append(6))
-    keyboard.on_press_key('7', lambda _: keyCode.append(7))
-    keyboard.on_press_key('8', lambda _: keyCode.append(8))
-    keyboard.on_press_key('9', lambda _: keyCode.append(9))
-    keyboard.on_press_key('0', lambda _: keyCode.append(0))
+    keyboard.on_press_key('1', lambda _: entered_pin.append(1))  # adds pin to a buffer
+    keyboard.on_press_key('2', lambda _: entered_pin.append(2))
+    keyboard.on_press_key('3', lambda _: entered_pin.append(3))
+    keyboard.on_press_key('4', lambda _: entered_pin.append(4))
+    keyboard.on_press_key('5', lambda _: entered_pin.append(5))
+    keyboard.on_press_key('6', lambda _: entered_pin.append(6))
+    keyboard.on_press_key('7', lambda _: entered_pin.append(7))
+    keyboard.on_press_key('8', lambda _: entered_pin.append(8))
+    keyboard.on_press_key('9', lambda _: entered_pin.append(9))
+    keyboard.on_press_key('0', lambda _: entered_pin.append(0))
 
 
 def AdminMenu():
-    global userPin, keyCode
+    global userPin, entered_pin
     keyboard.unhook_all() #Unhooks keyboard interrupts
     answer = input("\nWelcome back admin\n Would you like to change the PIN? Y/N?")
     while answer != 'Y' and answer != 'N':
@@ -194,30 +193,178 @@ def AdminMenu():
             print("PINs do not match. Try again by typing in your admin pin")
 
     set_up_key_press()
-    keyCode = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    entered_pin = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
 
 ser = serial.Serial("COM6", 115200, timeout=0.05)
 verification_window_open = False
+face_verified = False
 verified = False
+Admin_verified = False
 set_up_key_press()
 
-keyCode = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+entered_pin = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+root = Tk()
+root.title("Burglar Alarm")
+
+# entered_pin = []  # array to store entered pin
+
+Armed = 1
+Change = Armed
+
+Disarmed = 2
+Cancel = Disarmed
+
+Home = 3
+
 userPin = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 adminPin = [2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
 
+entry_box = Entry(root, width=35, borderwidth=5)  # making entry box (where numbers go) with specifications
+entry_box.grid(row=0, column=0, columnspan=3, padx=10, pady=30)
+
+text_box = Text(root, width=60, height=5)  # creating dialogue box to prompt user of what the system is doing
+text_box.grid(row=1, column=5)
+
+
+def button_click(number):  # function for clicking any number
+    # text_box.delete(1.0, END)  # when you begin typing a number, the dialogue box is emptied
+    current = entry_box.get()  # gets current number
+    entered_pin.append(number)  # adds number to list
+    entry_box.delete(0, END)  # deletes current
+    entry_box.insert(0, str(current) + str(number))  # reprints full number
+
+
+
+def button_clear():  # clears entry box
+    entry_box.delete(0, END)
+    # entered_pin.clear()  # clears list of numbers entered so far
+    text_box.delete(1.0, END)
+
+
+def modes():
+    text_box.delete(1.0, END)
+    text_box.insert(2.0, "\nPress one to arm system (1),\nPress two to disarm (2),\nPress three for at home mode (3) ")
+    root.update()
+
+
+def admin_settings():
+    text_box.insert(2.0, "\nPress one to change pin (1),\nPress two to cancel (2)")
+    root.update()
+
+
+# def button_enter():
+#     global verified, Admin_verified
+#     # print(entered_pin)
+#     if (entered_pin == userPin):  # if long pin is correct:
+#         entry_box.delete(0, END)  # delete entry box
+#         entered_pin = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # delete numebrs entered so far
+#         text_box.insert(1.0, "Correct User Long Pin")
+#         # e.insert(0,"Correct User Long Pin")
+#         modes()
+#         verified = True  # user is verified
+#
+#     elif entered_pin == Armed and verified == True:  # if long pin was correct and user selects mode 1
+#         entry_box.delete(0, END)  # delete entry box
+#         entered_pin = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # delete numebrs entered so far
+#         text_box.insert(1.0, "ARMED")
+#         verified = False  # user is no longer verified
+#
+#     elif entered_pin == userPin[0:len(entered_pin)]:
+#         entry_box.delete(0, END)
+#         entered_pin = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+#         text_box.insert(1.0, "Correct User Short Pin")  # if short pin is correct
+#
+#     elif entered_pin == adminPin:
+#         entry_box.delete(0, END)
+#         entered_pin = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+#         text_box.insert(1.0, "Correct Admin Pin")
+#         admin_settings()
+#         selection_number = [5]
+#
+#     elif verified:
+#         if entered_pin == Disarmed:  # if long pin was correct and user selects mode 1
+#             entry_box.delete(0, END)  # delete entry box
+#             entered_pin = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # delete numebrs entered so far
+#             text_box.insert(1.0, "DISARMED")
+#
+#         elif entered_pin == Home:  # if long pin was correct and user selects mode 1
+#             entry_box.delete(0, END)  # delete entry box
+#             entered_pin = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # delete numebrs entered so far
+#             text_box.insert(1.0, "AT HOME MODE")
+#
+#     elif Admin_verified:
+#         if entered_pin == Change:
+#             entry_box.delete(0, END)  # delete entry box
+#             entered_pin = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # delete numebrs entered so far
+#             text_box.insert(1.0, "Pin Changed")
+#             verified = False  # user is no longer verified
+#         elif entered_pin == Disarmed:  # if long pin was correct and user selects mode 1
+#             entry_box.delete(0, END)  # delete entry box
+#             entered_pin = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # delete numebrs entered so far
+#             text_box.insert(1.0, "CANCELLED")
+#             verified = False  # user is no longer verified
+#
+#     else:
+#         entry_box.delete(0, END)
+#         entered_pin = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+#         text_box.insert(1.0, "Incorrect Pin")
+
+
+def button_delete():  # deletes just last number
+    global entered_pin
+    entry_box.delete(len(entry_box.get()) - 1, END)
+    entered_pin = entered_pin[: -1]
+
+
+number_1 = Button(root, text="1", padx=40, pady=25, command=lambda: button_click(1))
+# creation of buttons and giving them the function of button click (see above)
+number_2 = Button(root, text="2", padx=40, pady=25, command=lambda: button_click(2))
+number_3 = Button(root, text="3", padx=40, pady=25, command=lambda: button_click(3))
+number_4 = Button(root, text="4", padx=40, pady=25, command=lambda: button_click(4))
+number_5 = Button(root, text="5", padx=40, pady=25, command=lambda: button_click(5))
+number_6 = Button(root, text="6", padx=40, pady=25, command=lambda: button_click(6))
+number_7 = Button(root, text="7", padx=40, pady=25, command=lambda: button_click(7))
+number_8 = Button(root, text="8", padx=40, pady=25, command=lambda: button_click(8))
+number_9 = Button(root, text="9", padx=40, pady=25, command=lambda: button_click(9))
+number_0 = Button(root, text="0", padx=40, pady=25, command=lambda: button_click(0))
+
+# button_enter = Button(root, text="ENTER", padx=40, pady=25, command=button_enter)
+button_delete = Button(root, text="DELETE", padx=37, pady=25, command=button_delete)
+button_clear = Button(root, text="CLEAR", padx=40, pady=25, command=button_clear)
+
+# ORGANISING THE GUI
+number_1.grid(row=1, column=0)
+number_2.grid(row=1, column=1)
+number_3.grid(row=1, column=2)
+number_4.grid(row=2, column=0)
+number_5.grid(row=2, column=1)
+number_6.grid(row=2, column=2)
+number_7.grid(row=3, column=0)
+number_8.grid(row=3, column=1)
+number_9.grid(row=3, column=2)
+number_0.grid(row=4, column=1)
+button_delete.grid(row=1, column=3)
+button_clear.grid(row=2, column=3)
+# button_enter.grid(row=3, column=3)
+
+# root.mainloop()
+root.update()
+
+
 def verify_pin(face_verified):
-    global keyCode
+    global entered_pin
 
-    lastFour = keyCode[-4:]
-    userFullPin = keyCode[-10:]
+    lastFour = entered_pin[-4:]
+    userFullPin = entered_pin[-10:]
 
-    if (len (keyCode) >= 40): # Limits the user to 3 attempts at getting the pin right
-        print("You've entered an incorrect pin too many times")
+    if (len(entered_pin) >= 40): # Limits the user to 3 attempts at getting the pin right
+        print("You've entered an incorrect pin too many times") # TODO: Change to GUI
         if debug: print("(Python) CLOSING VERIFICATION WINDOW")
         verification_window_open = False
         verified = False
-        keyCode = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        entered_pin = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
         window_closed_string = "VERIFICATION WINDOW CLOSED\n"  # need the \n for Serial reading
         window_closed_bytes = window_closed_string.encode()
@@ -228,11 +375,20 @@ def verify_pin(face_verified):
 
     if (face_verified == True) and (userPin[0:4] == lastFour):
         #print("Now you're really in baby;)")
+        entry_box.delete(0, END)
+        entered_pin = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # delete numebrs entered so far
+        text_box.insert(1.0, "Correct User Short Pin")  # if short pin is correct
+        root.update()
         print("You used facial rec")
         return True
 
     if (face_verified == False) and (userFullPin == userPin):
-        print("You did not use facial rec")
+        entry_box.delete(0, END)  # delete entry box
+        entered_pin = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # delete numebrs entered so far
+        text_box.insert(1.0, "Correct User Long Pin")
+        root.update()
+        # e.insert(0,"Correct User Long Pin")
+        modes()
         return True
 
     if (userFullPin == adminPin):
@@ -243,41 +399,67 @@ def verify_pin(face_verified):
     return False
 
 def change_mode():
+    root.update()
+    global verified, entered_pin
     mode = -1  # TODO: This could be a function (repeated)
     while mode not in [1, 2, 3]:
-        print("Please select a new system mode:\n 1: ARMED MODE\n 2: AT-HOME MODE\n 3: DISARMED MODE\n ")
-        mode = int(input())
-        if mode not in [1, 2, 3]:
-            print("Invalid mode selected. Please try again.")
+        modes()
+        mode = entered_pin[-1]
 
     s = ""
-    if mode == 1:
+    if mode == Armed:  # if long pin was correct and user selects mode 1
+        entry_box.delete(0, END)  # delete entry box
+        entered_pin = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # delete numebrs entered so far
+        text_box.insert(1.0, "ARMED")
+        root.update()
+        verified = False  # user is no longer verified
         s = "ARMED"
-    elif mode == 2:
+    if mode == Home:  # if long pin was correct and user selects mode 1
+        entry_box.delete(0, END)  # delete entry box
+        entered_pin = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # delete numebrs entered so far
+        text_box.insert(1.0, "AT HOME MODE")
+        root.update()
         s = "AT-HOME"
-    elif mode == 3:
+    if mode == Disarmed:  # if long pin was correct and user selects mode 1
+        entry_box.delete(0, END)  # delete entry box
+        entered_pin = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # delete numebrs entered so far
+        text_box.insert(1.0, "DISARMED")
+        root.update()
         s = "DISARMED"
+
     mode_string = "MODE: " + s + "\n"  # need the \n for Serial reading
     mode_bytes = mode_string.encode()
     ser.write(mode_bytes)
     if debug: print("(Python) Wrote mode change bytes to serial")
 
-
+    verified = False  # user is no longer verified
+    root.update()
     print("Please input your pin:  ")
-
 
 
 print("Please input your pin:  ")
 
 while True:
     try:
+        root.update()
+
         if verification_window_open == False: # For if the user wants to change mode from inside, with door locked
             face_verified = verify_face()
+            if face_verified:
+                text_box.delete(1.0, END)
+                text_box.insert(1.0, "Face Verified - You can use the short pin")
+                root.update()
+
+            else:
+                text_box.delete(1.0, END)
+                text_box.insert(1.0, "Face Not Verified - Please use the long pin")
+                root.update()
             verified = verify_pin(face_verified)
+            root.update()
             if verified:
                 change_mode()
                 verified = False
-                keyCode = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                entered_pin = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
         # verify_face()
         # read line from serial
@@ -286,14 +468,17 @@ while True:
         if (len(line) > 0 and debug): print("(Arduino) " + line, end="")
         if line.startswith("VERIFICATION WINDOW OPEN"):
             if debug: print("(Python) OPENING VERIFICATION WINDOW")
-            print("Alarm Sounding! Please input your pin:  ")
+            if debug: print("Alarm Sounding! Please input your pin:  ")
+            text_box.delete(1.0, END)
+            text_box.insert(1.0, "Alarm Sounding! Please input your pin:  ")
+            root.update()
             verification_window_open = True
 
         elif line.startswith("VERIFICATION WINDOW CLOSED"):
             if debug: print("(Python) CLOSING VERIFICATION WINDOW")
             verification_window_open = False
             verified = False
-            keyCode = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            entered_pin = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
         elif line.startswith("VERIFICATION REQUEST"):
             if debug: print("(Python) THERE WAS A VERIFICATION REQUEST")
@@ -307,7 +492,6 @@ while True:
                 verified_bytes = verified_string.encode()
                 ser.write(verified_bytes)
                 if debug: print("(Python) Wrote verified bytes to serial")
-
                 # Changing mode activity
                 change_mode()
             else:
@@ -319,7 +503,11 @@ while True:
                 currentTime= int(time.time_ns()/1000000)
                 filename = './unauth_photos/unauthIntruder%s.png' % (currentTime)
                 cv2.imwrite(filename, globalFrame)
-                print("You are currently unrecognized. A photo has been taken of you for security purposes. Enter your pin to verify your identity.") # Req 8.1.2
+                if debug: print("You are currently unrecognized. A photo has been taken of you for security purposes. Enter your pin to verify your identity.") # Req 8.1.2
+                text_box.delete(1.0, END)
+                text_box.insert(2.0, "Alarm Sounding! Please input your pin:  \n")
+                text_box.insert(2.0, "You are currently unrecognized. \nPhotos are being taken of you for security purposes.") # Req 8.1.2
+                root.update()
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
