@@ -1,5 +1,10 @@
 //
-// Created by robos on 24/02/2023.
+// Authors: Samuel Scott, Eurico Benedict, Simon Desir, Alex Hicks, Yu-ta Chou
+//
+// This header file contains sensor classes needed in the burglar alarm system.
+// The Sensor class is the parent class of Mag, Pir and Key sensor
+// This header file also contain the class for the LEDs on board the device.
+//
 //
 
 #ifndef ACS233_BURGLAR_ALARM_SENSOR_H
