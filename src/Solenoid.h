@@ -1,6 +1,7 @@
 //
 // Created by bened on 4/16/2023.
 //
+// Solenoid class for the alarm system, allows for solenoid to lock and unlock.
 
 #ifndef ACS233_BURGLAR_ALARM_SOLENOID_H
 #define ACS233_BURGLAR_ALARM_SOLENOID_H
