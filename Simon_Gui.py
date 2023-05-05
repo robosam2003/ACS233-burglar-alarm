@@ -4,7 +4,7 @@ root = Tk()
 root.title("Burglar Alarm")
 
 entered_pin = []  # array to store entered pin
-User_verified = False
+verified = False
 Admin_verified = False
 
 Armed = [1]
@@ -51,23 +51,17 @@ def admin_settings():
 
 
 def button_enter():
-    global User_verified, Admin_verified
+    global verified, Admin_verified
     # print(entered_pin)
-    if (entered_pin == userPin):  # if long pin is correct:
-        entry_box.delete(0, END)  # delete entry box
-        entered_pin.clear()  # delete numebrs entered so far
-        text_box.insert(1.0, "Correct User Long Pin")
-        # e.insert(0,"Correct User Long Pin")
-        modes()
-        User_verified = True  # user is verified
+    # if entered_pin == userPin:  # if long pin is correct:
+    #     entry_box.delete(0, END)  # delete entry box
+    #     entered_pin.clear()  # delete numebrs entered so far
+    #     text_box.insert(1.0, "Correct User Long Pin")
+    #     # e.insert(0,"Correct User Long Pin")
+    #     modes()
+    #     verified = True  # user is verified
 
-    elif entered_pin == Armed and User_verified == True:  # if long pin was correct and user selects mode 1
-        entry_box.delete(0, END)  # delete entry box
-        entered_pin.clear()  # delete numebrs entered so far
-        text_box.insert(1.0, "ARMED")
-        User_verified = False  # user is no longer verified
-
-    elif entered_pin == userPin[0:len(entered_pin)]:
+    elif entered_pin == userPin[0:len(entered_pin)] and verified == True:
         entry_box.delete(0, END)
         entered_pin.clear()
         text_box.insert(1.0, "Correct User Short Pin")  # if short pin is correct
@@ -79,33 +73,37 @@ def button_enter():
         admin_settings()
         selection_number = [5]
 
-    elif User_verified:
-        if entered_pin == Disarmed:  # if long pin was correct and user selects mode 1
-            entry_box.delete(0, END)  # delete entry box
-            entered_pin.clear()  # delete numebrs entered so far
-            text_box.insert(1.0, "DISARMED")
-
-        elif entered_pin == Home:  # if long pin was correct and user selects mode 1
-            entry_box.delete(0, END)  # delete entry box
-            entered_pin.clear()  # delete numebrs entered so far
-            text_box.insert(1.0, "AT HOME MODE")
+    # elif verified:
+    #     if entered_pin == Disarmed:  # if long pin was correct and user selects mode 1
+    #         entry_box.delete(0, END)  # delete entry box
+    #         entered_pin.clear()  # delete numebrs entered so far
+    #         text_box.insert(1.0, "DISARMED")
+    #     elif entered_pin == Armed:  # if long pin was correct and user selects mode 1
+    #         entry_box.delete(0, END)  # delete entry box
+    #         entered_pin.clear()  # delete numebrs entered so far
+    #         text_box.insert(1.0, "ARMED")
+    #         User_verified = False  # user is no longer verified
+    #     elif entered_pin == Home:  # if long pin was correct and user selects mode 1
+    #         entry_box.delete(0, END)  # delete entry box
+    #         entered_pin.clear()  # delete numebrs entered so far
+    #         text_box.insert(1.0, "AT HOME MODE")
 
     elif Admin_verified:
         if entered_pin == Change:
             entry_box.delete(0, END)  # delete entry box
             entered_pin.clear()  # delete numebrs entered so far
             text_box.insert(1.0, "Pin Changed")
-            User_verified = False  # user is no longer verified
+            verified = False  # user is no longer verified
         elif entered_pin == Disarmed:  # if long pin was correct and user selects mode 1
             entry_box.delete(0, END)  # delete entry box
             entered_pin.clear()  # delete numebrs entered so far
             text_box.insert(1.0, "CANCELLED")
-            User_verified = False  # user is no longer verified
+            verified = False  # user is no longer verified
 
-    else:
-        entry_box.delete(0, END)
-        entered_pin.clear()
-        text_box.insert(1.0, "Incorrect Pin")
+    # else:
+    #     entry_box.delete(0, END)
+    #     entered_pin.clear()
+    #     text_box.insert(1.0, "Incorrect Pin")
 
 
 def button_delete():  # deletes just last number

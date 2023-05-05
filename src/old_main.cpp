@@ -140,7 +140,7 @@
 //void unauthorizedEntry(UNAUTHORISED_ENTRY_METHODS method);
 //void authorizedEntry();
 //
-//// Setup and loop
+//// Setup and check_states
 //void setup() {
 //    // Set up Serial port (USB) on 9600 baud
 //    Serial.begin(9600);
@@ -175,7 +175,7 @@
 //    last_mode_change_time = -100000; // reset last mode change time so that system works instantly
 //}
 //
-//void loop() {
+//void check_states() {
 //    // Check for door state change
 //    if (lock_state == LOCK_STATES::UNLOCKED) {
 //        authorizedEntry();

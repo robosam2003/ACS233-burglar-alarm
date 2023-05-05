@@ -4,7 +4,7 @@ root = Tk()
 root.title("Burglar Alarm")
 
 entered_pin = [] #array to store entered pin
-User_verified = [4]
+verified = [4]
 Admin_verified = [5]
 
 Armed = [1]
@@ -62,19 +62,19 @@ def button_enter():
         global selection_number
         selection_number = [4]
 
-    elif entered_pin == Armed and selection_number == User_verified: #if long pin was correct and user selects mode 1
+    elif entered_pin == Armed and selection_number == verified: #if long pin was correct and user selects mode 1
             e.delete(0,END) #delete entry box
             entered_pin.clear() #delete numebrs entered so far
             text_box.insert(1.0, "ARMED")
             selection_number.clear()
             
 
-    elif entered_pin == Disarmed and selection_number == User_verified: #if long pin was correct and user selects mode 1
+    elif entered_pin == Disarmed and selection_number == verified: #if long pin was correct and user selects mode 1
             e.delete(0,END) #delete entry box
             entered_pin.clear() #delete numebrs entered so far
             text_box.insert(1.0, "DISARMED")
 
-    elif entered_pin == Home and selection_number == User_verified: #if long pin was correct and user selects mode 1
+    elif entered_pin == Home and selection_number == verified: #if long pin was correct and user selects mode 1
             e.delete(0,END) #delete entry box
             entered_pin.clear() #delete numebrs entered so far
             text_box.insert(1.0, "AT HOME MODE")         
