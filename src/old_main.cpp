@@ -43,7 +43,7 @@
 //#define PIR_PIN 19
 //
 //#define ALARM_FREQ 500
-//#define INTERMITTENT_TIMEOUT 20000 // 30 seconds
+//#define ENTER_LEAVE_TIMEOUT 20000 // 30 seconds
 //
 //int64_t ALARM_TIMEOUT = 30000; // 15 minutes
 //#define MODE_CHANGE_TIMEOUT 30000
@@ -418,7 +418,7 @@
 //            alarmOff(); // This is needed when the alarm times out
 //            break;
 //        case PIR_TRIGGERED:
-//            if ((timeSince_ms(security_timer) < INTERMITTENT_TIMEOUT)) {
+//            if ((timeSince_ms(security_timer) < ENTER_LEAVE_TIMEOUT)) {
 //                break;
 //            } // if the security timer is less than 30 seconds, the alarm will not go off
 //            else {
@@ -455,7 +455,7 @@
 //    // authorized entry
 ////        Serial.println("UNLOCKING DOOR"); - Now happening in the ISR
 ////        digitalWrite(SOLENOID_PIN, HIGH); // Unlock door
-//    while ((timeSince_ms(security_timer) < INTERMITTENT_TIMEOUT) && (authorization_state == AUTHORISATION_STATES::UNAUTHORISED)) {
+//    while ((timeSince_ms(security_timer) < ENTER_LEAVE_TIMEOUT) && (authorization_state == AUTHORISATION_STATES::UNAUTHORISED)) {
 //        if (door_state == DOOR_STATES::CLOSED) {
 //            if ((timeSince_ms(security_timer) > 10000) && (lock_state == LOCK_STATES::UNLOCKED)) { // only re-lock if the lock is unlocked
 //                // Door will re-lock after 10 seconds if not opened
@@ -471,7 +471,7 @@
 //        switch (system_mode) {
 //            case (SYSTEM_MODES::ARMED):
 //            case (SYSTEM_MODES::AT_HOME):
-//                if (timeSince_ms(last_door_open_time) < INTERMITTENT_TIMEOUT) {
+//                if (timeSince_ms(last_door_open_time) < ENTER_LEAVE_TIMEOUT) {
 //                    beep(1000, 50, 500);  // starts warning buzzer if door is open
 //                    verifyUser();
 //                    if (authorization_state == AUTHORISATION_STATES::AUTHORISED) {

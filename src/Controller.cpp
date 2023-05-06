@@ -1,5 +1,7 @@
-/** Controller.cpp - Created by robosam2003 on 21/04/2023.
- *  This file contains the implementation of the Controller class methods - See Controller.h.
+/**
+ * Controller.cpp
+ * Authors: Samuel Scott, Eurico Benedict, Simon Desir, Alex Hicks, Yu-ta Chou
+ * This file contains the implementation of the Controller class methods - See Controller.h.
  *
  */
 
@@ -19,9 +21,9 @@ Controller::Controller(int mag_sensor_pin, int pir_sensor_pin, int key_sensor_pi
     pir = new PIRSensor(pir_sensor_pin, PIRISRFunc);
     key = new KEYSensor(key_sensor_pin, KEYISRFunc);
 
-    disarmedModeLed = new LED(disarmed_mode_led);
-    atHomeModeLed = new LED(at_home_mode_led);
-    armedModeLed = new LED(armed_mode_led);
+    modeLeds[0] = new LED(disarmed_mode_led);
+    modeLeds[1] = new LED(at_home_mode_led);
+    modeLeds[2] = new LED(armed_mode_led);
 
     pirLed = new LED(pir_led);
     alarmLed = new LED(alarm_led);
@@ -30,7 +32,6 @@ Controller::Controller(int mag_sensor_pin, int pir_sensor_pin, int key_sensor_pi
     buzzer = new Buzzer(buzzer_pin);
 
     last_mode_change_time = -100000; // reset last mode change time so that system works instantly
-
 }
 
 void Controller::setup() {
@@ -113,27 +114,27 @@ void Controller::key_isr() {
 
 void Controller::toArmedMode() {
     system_mode = SYSTEM_MODES::ARMED;
-    disarmedModeLed->low(); //
-    atHomeModeLed->low();   //
-    armedModeLed->high();   //
+    modeLeds[0]->low(); //
+    modeLeds[1]->low();   //
+    modeLeds[2]->high();   //
     security_timer = -100000; // reset security timer in case mode changed inside intermittent timeout window
     last_mode_change_time = millis();
 }
 
 void Controller::toDisarmedMode() {
     system_mode = SYSTEM_MODES::DISARMED;
-    disarmedModeLed->high(); //
-    atHomeModeLed->low();   //
-    armedModeLed->low();   //
+    modeLeds[0]->high(); //
+    modeLeds[1]->low();   //
+    modeLeds[2]->low();   //
     security_timer = -100000; // reset security timer in case mode changed inside intermittent timeout window
     last_mode_change_time = millis();
 }
 
 void Controller::toAtHomeMode() {
     system_mode = SYSTEM_MODES::AT_HOME;
-    disarmedModeLed->low();  //
-    atHomeModeLed->high();   //
-    armedModeLed->low();   //
+    modeLeds[0]->low();  //
+    modeLeds[1]->high();   //
+    modeLeds[2]->low();   //
     security_timer = -100000; // reset security timer in case mode changed inside intermittent timeout window
     last_mode_change_time = millis();
 }
@@ -239,7 +240,7 @@ void Controller::unauthorizedEntry(UNAUTHORISED_ENTRY_METHODS method) {
             alarmOff(); // turns on Buzzer
             break;
         case PIR_TRIGGERED:
-            if ((timeSince_ms(security_timer) < INTERMITTENT_TIMEOUT)) {
+            if ((timeSince_ms(security_timer) < ENTER_LEAVE_TIMEOUT)) {
                 break;
             } // if the security timer is less than 30 seconds, the alarm will not go off
             else {
@@ -274,7 +275,7 @@ void Controller::unauthorizedEntry(UNAUTHORISED_ENTRY_METHODS method) {
 
 void Controller::authorizedEntry() {
 // authorized entry. Door unlocking happens in ISR.
-    while ((timeSince_ms(security_timer) < INTERMITTENT_TIMEOUT) && (authorization_state == AUTHORISATION_STATES::UNAUTHORISED)) {
+    while ((timeSince_ms(security_timer) < ENTER_LEAVE_TIMEOUT) && (authorization_state == AUTHORISATION_STATES::UNAUTHORISED)) {
         if (mag->door_state == DOOR_STATES::CLOSED) {
             if ((timeSince_ms(security_timer) > 10000) && (lock->state == LOCK_STATES::UNLOCKED)) { // only re-lock if the lock is unlocked
                 // Door will re-lock after 10 seconds if not opened
@@ -289,7 +290,7 @@ void Controller::authorizedEntry() {
         switch (system_mode) {
             case (SYSTEM_MODES::ARMED):
             case (SYSTEM_MODES::AT_HOME):
-                if (timeSince_ms(last_door_open_time) < INTERMITTENT_TIMEOUT) {
+                if (timeSince_ms(last_door_open_time) < ENTER_LEAVE_TIMEOUT) {
                     buzzer->beep(1000, 50, 500); // starts warning buzzer if door is open
                     verifyUser();
                     if (authorization_state == AUTHORISATION_STATES::AUTHORISED) {
@@ -316,7 +317,7 @@ void Controller::authorizedEntry() {
     authorization_state = AUTHORISATION_STATES::UNAUTHORISED;
 }
 
-void Controller::loop() {
+void Controller::check_states() {
     // Check for door state change
     if (lock->state == LOCK_STATES::UNLOCKED) {
         authorizedEntry();

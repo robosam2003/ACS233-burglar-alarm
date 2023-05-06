@@ -1,6 +1,12 @@
-//
-// Created by robos on 21/04/2023.
-//
+/*
+ * Controller.h
+ *
+ * Authors: Samuel Scott, Eurico Benedict, Simon Desir, Alex Hicks, Yu-ta Chou
+ *
+ * This header file contains the Controller class needed for the burglar alarm system.
+ * The class manages the state of the system and deals with the inputs from the sensors,
+ * as well as the outputs to the solenoid and buzzer and to the python code (for facial recognition and GUI).
+ */
 
 #ifndef ACS233_BURGLAR_ALARM_CONTROLLER_H
 #define ACS233_BURGLAR_ALARM_CONTROLLER_H
@@ -9,16 +15,10 @@
 #include "constants.h"
 #include "Solenoid.h"
 #include "Buzzer.h"
+#include "LED.h"
 
 
-// Definitions
-#define INTERMITTENT_TIMEOUT 30000 // 30 seconds
 
-
-// Lesson learned - don't do complex mathematical expressions in #defines
-#define ALARM_TIMEOUT 900000 // 15 minutes
-
-#define MODE_CHANGE_TIMEOUT 30000
 
 // Macros
 #define timeSince_ms(event) (millis() - event)
@@ -31,6 +31,9 @@ private:
     int64_t last_alarm_on_time = 0;
     int64_t last_mode_change_time = -100000;
 
+    int64_t ENTER_LEAVE_TIMEOUT = 30000;
+    int64_t ALARM_TIMEOUT = 40000;
+
     SYSTEM_MODES system_mode = AT_HOME;
 
     AUTHORISATION_STATES authorization_state = AUTHORISATION_STATES::UNAUTHORISED; //id password authorization_state variable
@@ -40,9 +43,10 @@ private:
     PIRSensor* pir;
     KEYSensor* key;
 
-    LED* disarmedModeLed;
-    LED* atHomeModeLed;
-    LED* armedModeLed;
+//    LED* disarmedModeLed; // now in an array to fulfill requirements
+//    LED* atHomeModeLed;
+//    LED* armedModeLed;
+    LED* modeLeds[3];
 
     LED* pirLed;
     LED* alarmLed;
@@ -96,7 +100,7 @@ public:
     void unauthorizedEntry(UNAUTHORISED_ENTRY_METHODS method);
     void authorizedEntry();
 
-    void loop();
+    void check_states();
 
     // Destructor
     ~Controller() {

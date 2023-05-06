@@ -3,7 +3,6 @@
 //
 // This header file contains sensor classes needed in the burglar alarm system.
 // The Sensor class is the parent class of Mag, Pir and Key sensor
-// This header file also contain the class for the LEDs on board the device.
 //
 //
 
@@ -76,30 +75,7 @@ public:
 };
 
 
-class LED {
-protected:
-    uint8_t LED_pin;
-public:
-    explicit LED(uint8_t pin) {
-        LED_pin = pin;
-        pinMode(LED_pin, OUTPUT);
-    }
 
-    void high() const {
-        digitalWrite(LED_pin,HIGH);
-    }
-
-    void low() const {
-        digitalWrite(LED_pin,LOW);
-    }
-
-    void blink(int onDelay, int offDelay) const {
-        digitalWrite(LED_pin,HIGH);
-        delay(onDelay);
-        digitalWrite(LED_pin,LOW);
-        delay(offDelay);
-    }
-};
 
 
 

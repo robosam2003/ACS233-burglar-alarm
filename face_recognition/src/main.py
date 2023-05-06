@@ -1,4 +1,4 @@
-# A burglar alarm system (GROUP 4) 23 Jan 2023
+# A burglar alarm system (GROUP 4) 6 May 2023
 # Authors: Samuel Scott, Eurico Benedict, Simon Desir, Alex Hicks, Yu-ta Chou
 #
 # This program is the computer end of a two piece inter-working software that runs
@@ -177,22 +177,62 @@ def set_up_key_press():
 
 def AdminMenu():
     global userPin, entered_pin
-    keyboard.unhook_all() #Unhooks keyboard interrupts
-    answer = input("\nWelcome back admin\n Would you like to change the PIN? Y/N?")
-    while answer != 'Y' and answer != 'N':
-        answer = input("Please enter a valid answer (Y/N):  ")
-    if answer == 'Y':
-        inputPIN0 = int(input("Enter a 10 digit new user PIN:  "))
-        inputPIN1 = int(input("Enter PIN again to:  "))
+    # keyboard.unhook_all() #Unhooks keyboard interrupts
+    # answer = input("\nWelcome back admin\n Would you like to change the PIN? Y/N?")
+    button_clear()
+    text_box.delete(1.0, END)
+    text_box.insert(END, "Welcome back admin\n Would you like to change the PIN? Y(1) / N(2)?\n")
+    root.update()
+    entered_pin = []
+    while len(entered_pin) == 0:
+        time.sleep(0.1)
+        root.update()
+    answer = entered_pin[-1]
+    while answer != 1 and answer != 2:
+        answer = entered_pin[-1]
+        # answer = input("Please enter a valid answer (Y(1) / N(2) ):  ")
+        text_box.delete(1.0, END)
+        text_box.insert(END, "Please enter a valid answer (Y(1) / N(2):  ")
+        root.update()
+    if answer == 1:
+        entered_pin = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        text_box.delete(1.0, END)
+        text_box.insert(END, "Enter a 10 digit new user PIN:  ")
+        root.update()
+        while len(entered_pin) < 20:
+            time.sleep(0.1)
+            root.update()
+        button_clear()
+        inputPIN0 = entered_pin[-10:]  # the last 10 digits
+        inputPIN0.reverse()
+        entered_pin = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # reset the entry buffer
+        text_box.insert(END, "Enter PIN again to confirm:  ")
+        root.update()
+        while len(entered_pin) < 20:
+            time.sleep(0.1)
+            root.update()
+        button_clear()
+        inputPIN1 = entered_pin[-10:]  # the last 10 digits
+        inputPIN1.reverse()
+        # inputPIN0 = int(input("Enter a 10 digit new user PIN:  "))
+        # inputPIN1 = int(input("Enter PIN again to:  "))
 
         if inputPIN0 == inputPIN1:
-            userPin = [int(x) for x in str(inputPIN0)]
-            userPin = userPin[0:10]
-            print("PIN successfully changed. Have a nice day!")
-        else:
-            print("PINs do not match. Try again by typing in your admin pin")
 
-    set_up_key_press()
+            userPin = inputPIN0[0:10]
+            # print("PIN successfully changed. Have a nice day!")
+            text_box.delete(1.0, END)
+            text_box.insert(END, "PIN successfully changed. Have a nice day!")
+            root.update()
+            time.sleep(1)
+        else:
+            # print("PINs do not match. Try again by typing in your admin pin")
+            text_box.delete(1.0, END)
+            text_box.insert(END, "PINs do not match. Try again by typing in your admin pin")
+            root.update()
+            time.sleep(1)
+
+    # set_up_key_press()
     entered_pin = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
 
@@ -240,7 +280,7 @@ def button_click(number):  # function for clicking any number
 def button_clear():  # clears entry box
     entry_box.delete(0, END)
     # entered_pin.clear()  # clears list of numbers entered so far
-    text_box.delete(1.0, END)
+    # text_box.delete(1.0, END)
 
 
 def modes():

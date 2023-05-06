@@ -31,16 +31,16 @@
 
 
 
-#include "Arduino.h"
+#include "Arduino.h" // Arduino.h is needed because we are using the platformio build system.
 #include "Controller.h"
 
 
 /// Definitions
 #define MAG_SWITCH_PIN 2 // attached to interrupt
 #define KEY_SENSOR_PIN 3 // attached to interrupt
-#define SOLENOID_PIN 12 // may be changed
+#define SOLENOID_PIN 12
 
-#define BUZZER_PIN 7 //
+#define BUZZER_PIN 7
 #define PIR_PIN 19
 
 #define DISARMED_MODE_LED 47 // Red
@@ -49,6 +49,8 @@
 #define PIR_LED 42 // ITS RED
 
 #define ALARM_LED 48 // ITS RED
+
+
 
 
 Controller cont(MAG_SWITCH_PIN, PIR_PIN, KEY_SENSOR_PIN,
@@ -62,6 +64,6 @@ void setup() {
 }
 
 void loop() {
-    cont.loop();
+    cont.check_states();
 
 }
